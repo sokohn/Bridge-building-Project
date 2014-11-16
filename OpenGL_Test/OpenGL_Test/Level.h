@@ -14,6 +14,8 @@ public:
 
 	void Update(float DeltaTime);
 
+	void SimulatePhysics( float DeltaTime );
+
 	void Draw();
 
 	Girder* AddGirder( BOLT* Bolt1, float x, float y );
@@ -27,5 +29,10 @@ public:
 private:
 	int MaxMoney;
 	int CurrentlySpentMoney;
+	float RoadLevel;
+
+	bool CheckIfRoad( Girder* girder );
+	void DrawRoad();
+
 
 };

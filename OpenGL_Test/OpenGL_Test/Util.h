@@ -38,3 +38,11 @@ extern SCREEN Screen;
 bool ShowStress();
 
 float RoundToNearestGridMarker(float loc);
+
+bool IsSimulating();
+void SetSimulating(bool Sim);
+
+bool IsPaused();
+void SetPaused(bool Pause);
+
+float maxf(float x, float y);

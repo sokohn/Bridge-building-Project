@@ -1,6 +1,8 @@
 #include "Bolt.h"
 #include "Girder.h"
+#include <math.h>
 #include "Util.h"
+
 
 void Girder::GetDrawColor( Color* color )
 {
@@ -14,9 +16,18 @@ void Girder::GetDrawColor( Color* color )
 	{
 		if( ShowStress() )
 		{
-			color->red = 0.0f;
-			color->green = 1.0f;
-			color->blue = 0.0f;
+			float UsedStressor = 0;
+			if( IsSimulating() )
+			{
+				UsedStressor = CurrentStress;
+			}
+			else
+			{
+				UsedStressor = MaxStress;
+			}
+			color->red = maxf(-1.0f*UsedStressor/GirderStrength,0);
+			color->green = ( GirderStrength - UsedStressor*2 ) / GirderStrength;
+			color->blue = maxf(UsedStressor/GirderStrength,0);
 		}
 		else if( isRoad )
 		{
@@ -26,9 +37,9 @@ void Girder::GetDrawColor( Color* color )
 		}
 		else
 		{
-			color->red = 0.85f;
-			color->green = 0.85f;
-			color->blue = 0.85f;
+			color->red = 0.75f;
+			color->green = 0.75f;
+			color->blue = 0.75f;
 		}
 	}
 }
@@ -40,4 +51,13 @@ Girder::Girder()
 	Highlighted = false;
 	isFinished = false;
 	isRoad = false;
+	CurrentStress = 0;
+	MaxStress = 0;
+}
+
+float Girder::GetStressForce( float currentLength )
+{
+    // f = k x
+    float dx = currentLength - StartingLength;
+    return 10 * dx;
 }

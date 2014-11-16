@@ -33,7 +33,7 @@ void updateGame()
 {
     glutPostRedisplay();
 
-	Level.Update(1.0f);
+	Level.Update(0.001f);
 }
 
 
@@ -131,6 +131,11 @@ void MouseMoveHandler( int x, int y)
 
 void MouseClickHandler(int button, int state, int x, int y)
 {
+	if(IsSimulating())
+	{
+		//TODO: Once I get some menu UI in, make sure they can still function
+		return;
+	}
 	float NormMouseLocX = x/ ZoomLevel;
 	float NormMouseLocY = (Screen.height-y) / ZoomLevel;
 	BOLT* HitBolt = NULL;
@@ -230,6 +235,26 @@ void MouseClickHandler(int button, int state, int x, int y)
 	}
 }
 
+void HandleKeyboard(unsigned char key, int x, int y) 
+{
+	if (key == 27)
+	{
+		exit(0);
+	}
+	else if( key == 's' || key == 'S' )
+	{
+		SetSimulating(!IsSimulating());
+		isDrawingGirder = false;
+	}
+	else if( key == 'p' || key == 'P' )
+	{
+		if( IsSimulating() )
+		{
+			SetPaused( !IsPaused() );
+		}
+	}
+}
+
 int main( int argc, char** argv)
 {
 	glutInit(&argc, argv);
@@ -247,11 +272,14 @@ int main( int argc, char** argv)
 	glutDisplayFunc( render );
 	glutMouseFunc( MouseClickHandler );
 	glutPassiveMotionFunc( MouseMoveHandler );
+	glutKeyboardFunc(HandleKeyboard);
 	glutIdleFunc(updateGame);
 
 	DrawGirder.Bolt2 = &DrawBolt;
 
 	ZoomLevel = 0.5;
+
+	SetSimulating(false);
 
 	GLenum err = glewInit();
 	if( err != GLEW_OK )
