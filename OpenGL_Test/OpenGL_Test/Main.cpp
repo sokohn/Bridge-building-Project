@@ -14,6 +14,7 @@ using namespace std;
 MOUSE Mouse;
 SCREEN Screen;
 LEVEL Level;
+float ZoomLevel;
 
 
 //used to show where the next girder would be located
@@ -35,19 +36,6 @@ void updateGame()
 	Level.Update(1.0f);
 }
 
-float RoundToNearestGridMarker(float loc)
-{
-	int num = (int)loc;
-	if( num % GridSpacing < GridSpacing/2)
-	{
-		return num - num % GridSpacing;
-	}
-	else
-	{
-		return num + GridSpacing - num % GridSpacing;
-	}
-}
-
 
 void render()
 {
@@ -56,7 +44,7 @@ void render()
 
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
-	glOrtho( 0, Screen.width, 0, Screen.height, -1, 1 );
+	glOrtho( 0, Screen.width / ZoomLevel, 0, Screen.height / ZoomLevel, -1, 1 );
 
     glMatrixMode( GL_MODELVIEW );
     glLoadIdentity();
@@ -103,8 +91,8 @@ void MouseMoveHandler( int x, int y)
 	//float NormMouseLocX = ( ( 2*x - Screen.width )/Screen.width ) * Screen.width;
 	//float NormMouseLocY = ( -1.0f*( ( 2*y - Screen.height )/Screen.height ) )* Screen.height;
 	
-	Mouse.x = x;
-	Mouse.y = Screen.height-y;
+	Mouse.x = x / ZoomLevel;
+	Mouse.y = (Screen.height-y) / ZoomLevel;
 
 	if( isDrawingGirder )
 	{
@@ -115,9 +103,25 @@ void MouseMoveHandler( int x, int y)
 		if( distance > MaxGirderLength * MaxGirderLength )
 		{
 			float theta = atan2((DrawGirder.Bolt1->y - Mouse.y),(DrawGirder.Bolt1->x - Mouse.x ));
-			fprintf(stderr, "theta: %f \n", theta);
 			Mouse.x = DrawGirder.Bolt1->x - cos(theta)*MaxGirderLength;
 			Mouse.y = DrawGirder.Bolt1->y - sin(theta)*MaxGirderLength;
+		}
+
+		for(int i =0; i< Level.Bolts->size(); i++ )
+		{
+			BOLT* Bolt = (*Level.Bolts)[i];
+			if( Bolt != NULL )
+			{
+				float distance = ( pow( Mouse.x - Bolt->x,2.0f) + pow( Mouse.y - Bolt->y,2.0f) );
+				//fprintf(stderr, "distance: %f \n", distance);
+				if( distance <= BOLT::collisionRadius * BOLT::collisionRadius )
+				{
+					Bolt->Highlighted = true;
+					DrawBolt.x = Bolt->x;
+					DrawBolt.y = Bolt->y;
+					return;
+				}
+			}
 		}
 
 		DrawBolt.x = RoundToNearestGridMarker( Mouse.x );
@@ -127,8 +131,8 @@ void MouseMoveHandler( int x, int y)
 
 void MouseClickHandler(int button, int state, int x, int y)
 {
-	float NormMouseLocX = x;
-	float NormMouseLocY = Screen.height-y;
+	float NormMouseLocX = x/ ZoomLevel;
+	float NormMouseLocY = (Screen.height-y) / ZoomLevel;
 	BOLT* HitBolt = NULL;
 
 	//iterate through all of the bolts and see if we are within the collision radius of one of them
@@ -199,28 +203,29 @@ void MouseClickHandler(int button, int state, int x, int y)
 				return;
 			}
 
-			girder = new Girder();
-			girder->Bolt1 = DrawGirder.Bolt1;
-			girder->isFinished = true;
-			Level.Girders->push_back(girder);
 			if( HitBolt == NULL )
 			{
 				//round the bolt's location to land on a grid spot
-				girder->Bolt2 = new BOLT( RoundToNearestGridMarker(DrawBolt.x), RoundToNearestGridMarker(DrawBolt.y) );
-				Level.Bolts->push_back(girder->Bolt2);
+				girder = Level.AddGirder(DrawGirder.Bolt1, DrawBolt.x, DrawBolt.y );
+				if( girder == NULL )
+				{
+					//must have failed
+					return;
+				}
 			}
 			else
 			{
 				//eventually put in a check here to make sure there isn't already a girder that connects these two bolts
-				girder->Bolt2 = HitBolt;
+				girder = Level.AddGirder(DrawGirder.Bolt1, HitBolt);
+				if( girder == NULL )
+				{
+					//must have failed
+					return;
+				}
 			}
 
 			//now set the most recently used bolt as the starting point for the next girder
 			DrawGirder.Bolt1 = girder->Bolt2;
-			
-			//now add it to the its bolts
-			girder->Bolt1->AttachedGirders.push_back(girder);
-			girder->Bolt2->AttachedGirders.push_back(girder);
 		}
 	}
 }
@@ -245,6 +250,8 @@ int main( int argc, char** argv)
 	glutIdleFunc(updateGame);
 
 	DrawGirder.Bolt2 = &DrawBolt;
+
+	ZoomLevel = 0.5;
 
 	GLenum err = glewInit();
 	if( err != GLEW_OK )

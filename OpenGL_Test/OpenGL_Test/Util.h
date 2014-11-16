@@ -3,6 +3,7 @@
 
 const int GridSpacing = 20;
 const int MaxGirderLength = 169;
+extern float ZoomLevel;
 
 struct Color
 {
@@ -35,3 +36,5 @@ struct SCREEN
 extern SCREEN Screen;
 
 bool ShowStress();
+
+float RoundToNearestGridMarker(float loc);

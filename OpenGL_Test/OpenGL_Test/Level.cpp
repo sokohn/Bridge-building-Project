@@ -17,6 +17,9 @@ LEVEL::LEVEL()
 	
 	BOLT* bolt = new Anchor(480,480);
 	Bolts->push_back(bolt);
+
+	MaxMoney = 20000;
+	CurrentlySpentMoney = 0;
 }
 
 void LEVEL::Update(float DeltaTime)
@@ -44,7 +47,7 @@ void LEVEL::Update(float DeltaTime)
 
 void drawGrid()
 {
-	int NumLines = Screen.width/GridSpacing;
+	int NumLines = ( Screen.width/ ZoomLevel )/GridSpacing;
 	//vertical lines
 	glLoadIdentity();
 	glPushMatrix();
@@ -74,13 +77,13 @@ void drawGrid()
 		
 		glBegin(GL_LINES);
 		glVertex3f( i*GridSpacing , 0 , 0.0f);
-		glVertex3f( i*GridSpacing, Screen.height, 0.0f);
+		glVertex3f( i*GridSpacing, Screen.height / ZoomLevel, 0.0f);
 		glEnd();  
 		
 		glPopMatrix();
 	}
 
-	NumLines = Screen.height/GridSpacing;
+	NumLines = ( Screen.height/ ZoomLevel )/GridSpacing;
 	for(int i = 0; i< NumLines; i++ )
 	{
 		glLoadIdentity();
@@ -106,7 +109,7 @@ void drawGrid()
 		
 		glBegin(GL_LINES);
 		glVertex3f( 0.0f , i*GridSpacing, 0.0f);
-		glVertex3f( Screen.width, i*GridSpacing, 0.0f);
+		glVertex3f( Screen.width/ ZoomLevel, i*GridSpacing, 0.0f);
 		glEnd();  
 		
 		glPopMatrix();
@@ -141,7 +144,7 @@ void LEVEL::Draw()
 		Girder* girder = (*Girders)[i];
 
 		//only draw the second end point and the connection if it is finished
-		if( girder->isFinished )
+		if( girder->isActive )
 		{
 			//now draw the connection line
 			Color color;
@@ -157,19 +160,65 @@ void LEVEL::Draw()
 	}
 }
 
-bool LEVEL::AddGirder( BOLT* Bolt1, float x, float y )
+Girder* LEVEL::AddGirder( BOLT* Bolt1, float x, float y )
 {
-	return true;
+	//add check for land collision once I add in land
+
+	//check to see if there if a bolt already exists where we want to put this bolt
+	float BoltLocX = RoundToNearestGridMarker(x); 
+	float BoltLocY = RoundToNearestGridMarker(y); 
+
+	for(int i =0; i < Bolts->size(); i++ )
+	{
+		if( (*Bolts)[i]->x == BoltLocX && (*Bolts)[i]->y == BoltLocY )
+		{
+			fprintf(stderr, "Bolts merged\n");
+			return AddGirder( Bolt1, (*Bolts)[i] );
+		}
+	}
+
+	Girder* girder = new Girder();
+	girder->Bolt1 = Bolt1;
+	girder->Bolt2 = new BOLT( BoltLocX , BoltLocY );
+	girder->isFinished = true;
+	Girders->push_back(girder);
+	Bolts->push_back(girder->Bolt2);
+	
+	//now add it to the its bolts
+	girder->Bolt1->AttachedGirders.push_back(girder);
+	girder->Bolt2->AttachedGirders.push_back(girder);
+	return girder;
 }
 
-bool LEVEL::AddGirder( BOLT* Bolt1, BOLT* Bolt2 )
+Girder* LEVEL::AddGirder( BOLT* Bolt1, BOLT* Bolt2 )
 {
-	return true;
+	//add in code to check for is these two bolts are already linked
+	for( int i = 0; i < Girders->size(); i++ )
+	{
+		Girder* girder = (*Girders)[i];
+		if( ( girder->Bolt1 == Bolt1 && girder->Bolt2 == Bolt2 ) || ( girder->Bolt1 == Bolt2 && girder->Bolt2 == Bolt1 ) )
+		{
+			fprintf(stderr, "This girder already exists\n");
+			return NULL;
+		}
+	}
+
+	//ok, we're good
+	Girder* girder = new Girder();
+	girder->Bolt1 = Bolt1;
+	girder->Bolt2 = Bolt2;
+	girder->isFinished = true;
+	Girders->push_back(girder);
+
+	
+	//now add it to the its bolts
+	girder->Bolt1->AttachedGirders.push_back(girder);
+	girder->Bolt2->AttachedGirders.push_back(girder);
+	return girder;
 }
 
 bool LEVEL::RemoveGirder()
 {
-
 	return true;
 }
 
@@ -222,4 +271,17 @@ bool LEVEL::RemoveBolt( BOLT* bolt )
 		}
 	}
 	return true;
+}
+
+void LEVEL::StartSimulation()
+{
+
+}
+
+void LEVEL::EndSimulation()
+{
+	for( int i = 0; i < Girders->size(); i++ )
+	{
+		(*Girders)[i]->isActive = true;
+	}
 }

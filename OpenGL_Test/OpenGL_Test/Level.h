@@ -16,9 +16,16 @@ public:
 
 	void Draw();
 
-	bool AddGirder( BOLT* Bolt1, float x, float y );
-	bool AddGirder( BOLT* Bolt1, BOLT* Bolt2 );
+	Girder* AddGirder( BOLT* Bolt1, float x, float y );
+	Girder* AddGirder( BOLT* Bolt1, BOLT* Bolt2 );
 	bool RemoveGirder();
 	bool RemoveBolt( BOLT* bolt );
+
+	void StartSimulation();
+	void EndSimulation();
+
+private:
+	int MaxMoney;
+	int CurrentlySpentMoney;
 
 };

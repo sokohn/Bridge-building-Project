@@ -12,6 +12,8 @@ public:
 	bool Highlighted;
 	bool isRoad;
 
+	bool isActive;
+
 	Girder();
 
 	void GetDrawColor( Color* color );

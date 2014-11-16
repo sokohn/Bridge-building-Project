@@ -16,7 +16,7 @@ public:
 	BOLT(float _x, float _y);
 	~BOLT();
 
-	static const int collisionRadius = 15;
+	static const int collisionRadius = 10;
 
 	float GetDrawX();
 	float GetDrawY();
