@@ -3,6 +3,8 @@
 #include <iostream>
 #include <math.h>
 #include <vector>
+#include <time.h>
+
 #include "Bolt.h"
 #include "Girder.h"
 #include "Level.h"
@@ -15,6 +17,7 @@ MOUSE Mouse;
 SCREEN Screen;
 LEVEL Level;
 float ZoomLevel;
+clock_t PrevTime;
 
 
 //used to show where the next girder would be located
@@ -32,8 +35,10 @@ void changeViewport(int w, int h)
 void updateGame()
 {
     glutPostRedisplay();
-
-	Level.Update(0.001f);
+	clock_t CurTime;
+	CurTime = clock();
+	Level.Update( ( (float)(CurTime - PrevTime) ) / CLOCKS_PER_SEC );
+	PrevTime=CurTime;
 }
 
 
@@ -274,6 +279,7 @@ int main( int argc, char** argv)
 	glutPassiveMotionFunc( MouseMoveHandler );
 	glutKeyboardFunc(HandleKeyboard);
 	glutIdleFunc(updateGame);
+	PrevTime = clock();
 
 	DrawGirder.Bolt2 = &DrawBolt;
 

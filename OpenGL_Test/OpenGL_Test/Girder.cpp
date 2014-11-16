@@ -59,5 +59,5 @@ float Girder::GetStressForce( float currentLength )
 {
     // f = k x
     float dx = currentLength - StartingLength;
-    return 10 * dx;
+    return 100 * dx;
 }
