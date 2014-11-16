@@ -46,3 +46,4 @@ bool IsPaused();
 void SetPaused(bool Pause);
 
 float maxf(float x, float y);
+float minf(float x, float y);

@@ -19,8 +19,10 @@ LEVEL::LEVEL()
 	
 	BOLT* bolt = new Anchor(480,480);	
 	Bolts->push_back(bolt);
-	bolt = new Anchor(960,480);	
+	bolt = new Anchor(800,480);	
 	Bolts->push_back(bolt);
+
+
 	RoadLevel = 480;
 
 	MaxMoney = 20000;
@@ -68,6 +70,8 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 		BOLT* Bolt = (*Bolts)[i];
 		Bolt->forceX *= damping;
 		Bolt->forceY *= damping;
+		Bolt->VelocityX*= damping;
+		Bolt->VelocityY*= damping;
 	}
 
 	// apply gravity to bolts
@@ -79,8 +83,8 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 		Girder* girder = (*Girders)[i];
 		if( girder->isActive )
 		{
-			girder->Bolt1->forceY += weight / 2;
-			girder->Bolt2->forceY += weight / 2;
+			girder->Bolt1->JustAppliedForceY += weight / 2;
+			girder->Bolt2->JustAppliedForceY += weight / 2;
 		}
 	}
 
@@ -101,8 +105,8 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 		{
 			girder->MaxStress = girder->CurrentStress;
 		}
-		float NormalizedX = ( girder->Bolt1->x - girder->Bolt2->x )/ currentLength;
-		float NormalizedY = ( girder->Bolt1->y - girder->Bolt2->y )/ currentLength;
+		float NormalizedX = ( girder->Bolt2->x - girder->Bolt1->x )/ currentLength;
+		float NormalizedY = ( girder->Bolt2->y - girder->Bolt1->y )/ currentLength;
 		float forceX = stress * NormalizedX;
 		float forceY = stress * NormalizedY;
 
@@ -115,16 +119,31 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 		}
 
 		// accumulate first end
-		girder->Bolt1->forceX += forceX;
-		girder->Bolt1->forceX += forceY;
+		girder->Bolt1->JustAppliedForceX -= forceX;
+		girder->Bolt1->JustAppliedForceY -= forceY;
 
 		// accumulate second end
-		girder->Bolt2->forceX -= forceX;
-		girder->Bolt2->forceX -= forceY;
+		girder->Bolt2->JustAppliedForceX += forceX;
+		girder->Bolt2->JustAppliedForceY += forceY;
 	}*/
 
+	for( int i = 0; i < Girders->size(); i++ )
+	{
+		Girder* girder = (*Girders)[i];
+		if( !girder->isActive )
+		{
+			continue;
+		}
+		float currentLength = GetBoltDistance( girder->Bolt1, girder->Bolt2 );
+		if( currentLength > girder->StartingLength *1.1f || currentLength < girder->StartingLength / 1.1f )
+		{
+			girder->isActive = false;
+		}
+	}
+
+
 	//go through the bolts and apply forces to their neighbors
-	for( int z =0; z < 50; z++ )
+	for( int z =0; z < 1; z++ )
 	{
 		for( int i = 0; i < Bolts->size(); i++ )
 		{
@@ -132,6 +151,10 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 			if( !Bolt->CanMove() )
 			{
 				//they don't need to transfer force to others
+				//Bolt->JustAppliedForceX = 0;
+				//Bolt->JustAppliedForceY = 0;
+				Bolt->forceX =0;
+				Bolt->forceY = 0;
 				continue;
 			}
 			for(int j = 0; j < Bolt->AttachedGirders.size(); j++ )
@@ -153,17 +176,32 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 			
 				//now vector project my force onto the neighbor
 				float currentLength = GetBoltDistance( Bolt, OtherBolt );
-				float NormalizedX = ( Bolt->x - OtherBolt->x )/ currentLength;
-				float NormalizedY = ( Bolt->y - OtherBolt->y )/ currentLength;
+				float NormalizedX = (  Bolt->x - OtherBolt->x )/ currentLength;
+				float NormalizedY = (  Bolt->y - OtherBolt->y )/ currentLength;
 				float ForceMagnitude = Bolt->forceX*NormalizedX + Bolt->forceY*NormalizedY;
-				OtherBolt->forceX+= ForceMagnitude*NormalizedX;
-				OtherBolt->forceY+= ForceMagnitude*NormalizedY;
-				Bolt->forceX -= ForceMagnitude*NormalizedX;
-				Bolt->forceY -= ForceMagnitude*NormalizedY;
+				OtherBolt->JustAppliedForceX+= ForceMagnitude*NormalizedX;
+				OtherBolt->JustAppliedForceY+= ForceMagnitude*NormalizedY;
+				Bolt->JustAppliedForceX -= ForceMagnitude*NormalizedX;
+				Bolt->JustAppliedForceY -= ForceMagnitude*NormalizedY;
+				if( !OtherBolt->CanMove() )
+				{
+					//anchors eat all force from their neighbors
+					Bolt->JustAppliedForceX = 0;
+					Bolt->JustAppliedForceY = 0;
+				}
 
 			}
 		}
+		//run through all of the bolts and print out the forces acting on them
+		for( int i = 0; i < Bolts->size(); i++ )
+		{
+			BOLT* Bolt = (*Bolts)[i];
+			Bolt->forceX+=Bolt->JustAppliedForceX;
+			Bolt->forceY+=Bolt->JustAppliedForceY;
+			fprintf(stderr, "Bolt %d\nForce X: %f \t Force Y: %f \n",i, Bolt->forceX, Bolt->forceY );
+		}
 	}
+
 
 	//move move the bolts
 	for( int i = 0; i < Bolts->size(); i++ )
@@ -171,8 +209,10 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 		BOLT* Bolt = (*Bolts)[i];
 		if(Bolt->CanMove() )
 		{
-			Bolt->x += Bolt->forceX*DeltaTime*DeltaTime/2;
-			Bolt->y += Bolt->forceY*DeltaTime*DeltaTime/2;
+			//Bolt->VelocityX+= Bolt->forceX*DeltaTime;
+			//Bolt->VelocityY+= Bolt->forceY*DeltaTime;
+			Bolt->x += Bolt->forceX*DeltaTime;
+			Bolt->y += Bolt->forceY*DeltaTime;
 		}
 	}
 
@@ -286,7 +326,7 @@ void LEVEL::Draw()
 		glPopMatrix();
 
 		//now draw the force diagrams
-		if( IsSimulating() )
+		if( IsSimulating() )// !IsPaused() )
 		{
 			glLoadIdentity();
 			glPushMatrix();
@@ -294,6 +334,7 @@ void LEVEL::Draw()
 			glColor3f( 1.0f ,1.0f ,1.0f ); 
 			glBegin(GL_LINES);
 			glVertex3f( Bolt->GetDrawX(), Bolt->GetDrawY(), 0.0f);
+			//fprintf(stderr, "Force X: %f \t Force Y: %f \n", Bolt->forceX, Bolt->forceY );
 			glVertex3f( Bolt->GetDrawX()+Bolt->forceX, Bolt->GetDrawY()+Bolt->forceY, 0.0f);
 			glEnd();  
 		}
@@ -472,6 +513,10 @@ void LEVEL::StartSimulation()
 		(*Bolts)[i]->startY = (*Bolts)[i]->y;
 		(*Bolts)[i]->forceX = 0.0;
 		(*Bolts)[i]->forceY = 0.0;
+		(*Bolts)[i]->VelocityX =0.0f;
+		(*Bolts)[i]->VelocityY =0.0f;
+		(*Bolts)[i]->JustAppliedForceX =0.0f;
+		(*Bolts)[i]->JustAppliedForceY =0.0f;
 	}
 
 	for(int i =0; i < Girders->size(); i++ )

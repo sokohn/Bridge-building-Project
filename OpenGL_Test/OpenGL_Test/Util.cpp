@@ -35,6 +35,7 @@ void SetSimulating(bool Sim)
 	{
 		if( Sim )
 		{
+			fprintf(stderr, "\n\n\nStarting Simulation\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n\n\n" );
 			Level.StartSimulation();
 		}
 		else
@@ -58,6 +59,16 @@ void SetPaused(bool Pause)
 float maxf(float x, float y)
 {
 	if(x > y )
+	{
+		return x;
+	}
+
+	return y;
+}
+
+float minf(float x, float y)
+{
+	if(x < y )
 	{
 		return x;
 	}

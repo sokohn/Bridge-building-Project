@@ -14,8 +14,13 @@ public:
 	float startX;
 	float startY;
 
-	float forceX;
-	float forceY;
+	double forceX;
+	double forceY;
+	double JustAppliedForceX;
+	double JustAppliedForceY;
+
+	float VelocityX;
+	float VelocityY;
 
 	bool Highlighted;
 	std::vector<Girder*> AttachedGirders;
