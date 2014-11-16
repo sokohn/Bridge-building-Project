@@ -1,5 +1,8 @@
 // a file to contain various helper structs and consts that don't a better place to live
+#pragma once
 
+const int GridSpacing = 20;
+const int MaxGirderLength = 169;
 
 struct Color
 {
@@ -30,3 +33,5 @@ struct SCREEN
 };
 
 extern SCREEN Screen;
+
+bool ShowStress();

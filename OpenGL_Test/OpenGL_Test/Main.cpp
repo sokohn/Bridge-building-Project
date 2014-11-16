@@ -4,32 +4,22 @@
 #include <math.h>
 #include <vector>
 #include "Bolt.h"
+#include "Girder.h"
+#include "Level.h"
 #include "Util.h"
 
 using namespace std;
 
 
-static MOUSE Mouse;
+MOUSE Mouse;
 SCREEN Screen;
-
-class Girder
-{
-public:
-	Bolt* Bolt1;
-	Bolt* Bolt2;
-	bool isFinished;
-
-	Girder()
-	{
-		Bolt1 = NULL;
-		Bolt2 = NULL;
-		isFinished = false;
-	}
-};
+LEVEL Level;
 
 
-static vector<Girder*>* Girders;
-static vector<Bolt*>* Bolts;
+//used to show where the next girder would be located
+static Girder DrawGirder;
+static BOLT DrawBolt(0,0);
+static bool isDrawingGirder = false;
 
 void changeViewport(int w, int h)
 {
@@ -42,185 +32,145 @@ void updateGame()
 {
     glutPostRedisplay();
 
-	//iterate through all of the bolts and see if we are within the collision radius of one of them
-	for(int i =0; i< Bolts->size(); i++ )
-	{
-		Bolt* Bolt = (*Bolts)[i];
-		if( Bolt != NULL )
-		{
-			float distance = ( pow( Mouse.x - Bolt->x,2.0f) + pow( Mouse.y - Bolt->y,2.0f) );
-			if( distance <= Bolt::collisionRadius * Bolt::collisionRadius )
-			{
-				Bolt->Highlighted = true;
-			}
-			else
-			{
-				Bolt->Highlighted = false;
-			}
-		}
-	}
+	Level.Update(1.0f);
 }
 
-void drawGrid()
+float RoundToNearestGridMarker(float loc)
 {
-	int NumLines = Screen.width/10;
-	//vertical lines
-	glLoadIdentity();
-	glPushMatrix();
-	glTranslatef(0.0f,0.0f,0.5f);
-	for(int i = 0; i< NumLines; i++ )
+	int num = (int)loc;
+	if( num % GridSpacing < GridSpacing/2)
 	{
-		glLoadIdentity();
-		glPushMatrix();
-		if( i % 10 == 0 )
-		{
-			//major line
-			glLineWidth(0.25f);			
-			glColor3f( 0.75f,0.75f, 0.75f );
-		}
-		else if( i % 5 == 0 )
-		{
-			//medium line
-			glLineWidth(0.25f);			
-			glColor3f( 0.5f,0.5f, 0.5f );
-		}
-		else
-		{
-			//minor lines
-			glLineWidth(0.25f);			
-			glColor3f( 0.0f,0.0f, 0.0f );
-		}
-		
-		glBegin(GL_LINES);
-		glVertex3f( (i - NumLines/2.0f) /(NumLines/2.0f) , 1.0f , 0.0f);
-		glVertex3f( (i - (NumLines/2.0f)) /(NumLines/2.0f), -1.0f, 0.0f);
-		glEnd();  
-		
-		glPopMatrix();
+		return num - num % GridSpacing;
 	}
-
-	NumLines = Screen.height/10;
-	for(int i = 0; i< NumLines; i++ )
+	else
 	{
-		glLoadIdentity();
-		glPushMatrix();
-		if( i % 10 == 0 )
-		{
-			//major line
-			glLineWidth(0.25f);			
-			glColor3f( 0.75f,0.75f, 0.75f );
-		}
-		else if( i % 5 == 0 )
-		{
-			//medium line
-			glLineWidth(0.25f);			
-			glColor3f( 0.5f,0.5f, 0.5f );
-		}
-		else
-		{
-			//minor lines
-			glLineWidth(0.25f);			
-			glColor3f( 0.0f,0.0f, 0.0f );
-		}
-		
-		glBegin(GL_LINES);
-		glVertex3f( 1.0f , (i - (NumLines/2.0f)) /(NumLines/2.0f), 0.0f);
-		glVertex3f( -1.0f, (i - (NumLines/2.0f)) /(NumLines/2.0f), 0.0f);
-		glEnd();  
-		
-		glPopMatrix();
+		return num + GridSpacing - num % GridSpacing;
 	}
-	glPopMatrix();
 }
+
 
 void render()
 {
-	glClearColor(0.3f,0.3f,0.4f,1.0f);
+	glClearColor(0.15f,0.15f,0.175f,0.0f);
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
-	glOrtho( 0, Screen.width, -1*Screen.height, Screen.height, -1, 1 );
+	glOrtho( 0, Screen.width, 0, Screen.height, -1, 1 );
 
     glMatrixMode( GL_MODELVIEW );
     glLoadIdentity();
 	glPushMatrix();
 
 	glEnable(GL_MULTISAMPLE_ARB);
-	drawGrid();
+	
+	Level.Draw();
 
-	for(int i =0; i< Bolts->size(); i++ )
+	//now draw the drawgirder and drawbolt
+	if( isDrawingGirder )
 	{
-		
-		Bolt* Bolt = (*Bolts)[i];
+		//draw the bolt
 		Color color;
-		Bolt->GetDrawColor( &color );
-
+		DrawBolt.GetDrawColor( &color );
 		glLoadIdentity();
 		glPushMatrix();
-		//draw the first point
-		glPushMatrix();
-		//glTranslatef( Bolt->GetDrawX(), Bolt->GetDrawY(), 0.0f );
 		glPointSize(5.0);
 		glBegin(GL_POINTS);
 		glColor3f( color.red ,color.green ,color.blue );  
-		//glVertex3f( 0.0f, 0.0f, 0.0f);              // Top
-		glVertex3f( Bolt->GetDrawX(), Bolt->GetDrawY(), 0.0f );
+		glVertex3f( DrawBolt.GetDrawX(), DrawBolt.GetDrawY(), 0.0f );
 		glEnd();       
 		glPopMatrix();
-	}
 
-	for(int i =0; i<Girders->size(); i++ )
-	{
-		glLoadIdentity();
+		//and then the girder
 		glPushMatrix();
-		Girder* girder = (*Girders)[i];
-
-		//only draw the second end point and the connection if it is finished
-		if( girder->isFinished )
-		{
 			//now draw the connection line
-			glLineWidth(1.5f);
-			glBegin(GL_LINES);
-			glColor3f( 0.0f,1.0f,0.0f );
-			glVertex3f( girder->Bolt1->GetDrawX(), girder->Bolt1->GetDrawY(), 0.0f);
-			glVertex3f( girder->Bolt2->GetDrawX(), girder->Bolt2->GetDrawY(), 0.0f);
-			glEnd();  
-		}
+		glLineWidth(1.5f);
+		glBegin(GL_LINES);
+		glColor3f( 0.0f,1.0f,0.0f );
+		glVertex3f( DrawGirder.Bolt1->GetDrawX(), DrawGirder.Bolt1->GetDrawY(), 0.0f);
+		glVertex3f( DrawGirder.Bolt2->GetDrawX(), DrawGirder.Bolt2->GetDrawY(), 0.0f);
+		glEnd();  
 		glPopMatrix();
 
 	}
+
 	glPopMatrix();
     glutSwapBuffers();
 }
 
 void MouseMoveHandler( int x, int y)
 {
-	float NormMouseLocX = ( ( 2*x - Screen.width )/Screen.width ) * Screen.width;
-	float NormMouseLocY = ( -1.0f*( ( 2*y - Screen.height )/Screen.height ) )* Screen.height;
+	//float NormMouseLocX = ( ( 2*x - Screen.width )/Screen.width ) * Screen.width;
+	//float NormMouseLocY = ( -1.0f*( ( 2*y - Screen.height )/Screen.height ) )* Screen.height;
 	
-	Mouse.x = NormMouseLocX;
-	Mouse.y = NormMouseLocY;
+	Mouse.x = x;
+	Mouse.y = Screen.height-y;
+
+	if( isDrawingGirder )
+	{
+		//update the draw location for the new girder
+		
+		//firstly, reproject the vector if it is too long
+		int distance = ( pow( DrawGirder.Bolt1->x - Mouse.x,2.0f) + pow( DrawGirder.Bolt1->y - Mouse.y,2.0f) );
+		if( distance > MaxGirderLength * MaxGirderLength )
+		{
+			float theta = atan2((DrawGirder.Bolt1->y - Mouse.y),(DrawGirder.Bolt1->x - Mouse.x ));
+			fprintf(stderr, "theta: %f \n", theta);
+			Mouse.x = DrawGirder.Bolt1->x - cos(theta)*MaxGirderLength;
+			Mouse.y = DrawGirder.Bolt1->y - sin(theta)*MaxGirderLength;
+		}
+
+		DrawBolt.x = RoundToNearestGridMarker( Mouse.x );
+		DrawBolt.y = RoundToNearestGridMarker( Mouse.y );
+	}
 }
 
 void MouseClickHandler(int button, int state, int x, int y)
 {
-	float NormMouseLocX = ( ( 2*x - Screen.width )/Screen.width ) * Screen.width;
-	float NormMouseLocY = ( -1.0f*( ( 2*y - Screen.height )/Screen.height ) )* Screen.height;
-	Bolt* HitBolt = NULL;
+	float NormMouseLocX = x;
+	float NormMouseLocY = Screen.height-y;
+	BOLT* HitBolt = NULL;
 
 	//iterate through all of the bolts and see if we are within the collision radius of one of them
-	for(int i =0; i< Bolts->size(); i++ )
+	for(int i =0; i< Level.Bolts->size(); i++ )
 	{
-		Bolt* Bolt = (*Bolts)[i];
+		BOLT* Bolt = (*Level.Bolts)[i];
 		if( Bolt != NULL )
 		{
 			float distance = ( pow( NormMouseLocX - Bolt->x,2.0f) + pow( NormMouseLocY - Bolt->y,2.0f) );
-			if( distance <= Bolt::collisionRadius * Bolt::collisionRadius )
+			//fprintf(stderr, "distance: %f \n", distance);
+			if( distance <= BOLT::collisionRadius * BOLT::collisionRadius )
 			{
 				Bolt->Highlighted = true;
 				HitBolt = Bolt;
 				break;
+			}
+		}
+	}
+
+	if( button == GLUT_RIGHT_BUTTON  && state == GLUT_UP )
+	{
+		if( isDrawingGirder )
+		{
+			isDrawingGirder = false;
+		}
+		else
+		{
+			//we might be removing a bolt
+			if( HitBolt != NULL )
+			{
+				//check if we can delete this bolt
+				if( !HitBolt->CanBeDeleted() )
+				{
+					return;
+				}
+
+				Level.RemoveBolt(HitBolt);
+
+				//now finally delete the bolt
+				delete HitBolt;
+				return;
+
 			}
 		}
 	}
@@ -230,55 +180,47 @@ void MouseClickHandler(int button, int state, int x, int y)
 		Girder* girder = NULL;
 
 		//check to see if we need to add a new girder, or if we are finishing the current one
-		bool needStartNewGirder = false;
-		if( Girders->size() == 0 )
-		{
-			needStartNewGirder = true;
-		}
-		else if( ( *Girders->rbegin() ) == NULL )
-		{
-			needStartNewGirder = true;
-		}
-		else if( ( *Girders->rbegin() )->isFinished )
-		{
-			needStartNewGirder = true;
-		}
 
-		if( needStartNewGirder )
+		if( !isDrawingGirder )
 		{
 			if( HitBolt == NULL )
 			{
 				//can't start without a starting bolt, so bail
 				return;
 			}
-			girder = new Girder();
-			girder->Bolt1 = HitBolt;
-			Girders->push_back(girder);
+			isDrawingGirder = true;
+			DrawGirder.Bolt1 = HitBolt;
 		}
 		else
 		{
-			girder = ( *Girders->rbegin() );
-			//check to see if the second end is on a bolt that exists
+			//make sure the start and end points aren't the same 
+			if( HitBolt == DrawGirder.Bolt1 )
+			{
+				return;
+			}
+
+			girder = new Girder();
+			girder->Bolt1 = DrawGirder.Bolt1;
+			girder->isFinished = true;
+			Level.Girders->push_back(girder);
 			if( HitBolt == NULL )
 			{
-				girder->Bolt2 = new Bolt( NormMouseLocX, NormMouseLocY );
-				Bolts->push_back(girder->Bolt2);
-				girder->isFinished = true;
+				//round the bolt's location to land on a grid spot
+				girder->Bolt2 = new BOLT( RoundToNearestGridMarker(DrawBolt.x), RoundToNearestGridMarker(DrawBolt.y) );
+				Level.Bolts->push_back(girder->Bolt2);
 			}
 			else
 			{
-				//is it our first bolt?
-				if( HitBolt == girder->Bolt1 )
-				{
-					//can't connect to itself
-				}
-				else
-				{
-					//eventually put in a check here to make sure there isn't already a girder that connects these two bolts
-					girder->Bolt2 = HitBolt;
-					girder->isFinished = true;
-				}
+				//eventually put in a check here to make sure there isn't already a girder that connects these two bolts
+				girder->Bolt2 = HitBolt;
 			}
+
+			//now set the most recently used bolt as the starting point for the next girder
+			DrawGirder.Bolt1 = girder->Bolt2;
+			
+			//now add it to the its bolts
+			girder->Bolt1->AttachedGirders.push_back(girder);
+			girder->Bolt2->AttachedGirders.push_back(girder);
 		}
 	}
 }
@@ -296,22 +238,13 @@ int main( int argc, char** argv)
 	glEnable(GL_CLIP_DISTANCE5);
 	glEnable(GL_MULTISAMPLE_ARB);
 
-	Girders = new vector<Girder*>();
-	Bolts = new vector<Bolt*>();
-
 	glutReshapeFunc( changeViewport );
 	glutDisplayFunc( render );
 	glutMouseFunc( MouseClickHandler );
 	glutPassiveMotionFunc( MouseMoveHandler );
 	glutIdleFunc(updateGame);
 
-	Bolt* bolt = new Anchor(Screen.width,100);
-	Bolts->push_back(bolt);
-	bolt = new Anchor(-Screen.width,500);
-	Bolts->push_back(bolt);
-	bolt = new Anchor(700,100);
-	Bolts->push_back(bolt);
-
+	DrawGirder.Bolt2 = &DrawBolt;
 
 	GLenum err = glewInit();
 	if( err != GLEW_OK )

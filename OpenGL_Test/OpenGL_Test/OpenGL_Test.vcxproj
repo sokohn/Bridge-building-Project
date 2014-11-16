@@ -71,10 +71,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Bolt.cpp" />
+    <ClCompile Include="Girder.cpp" />
+    <ClCompile Include="Level.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bolt.h" />
+    <ClInclude Include="Girder.h" />
+    <ClInclude Include="Level.h" />
     <ClInclude Include="Util.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
