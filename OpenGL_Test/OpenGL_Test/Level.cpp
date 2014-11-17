@@ -17,10 +17,14 @@ LEVEL::LEVEL()
 	Bolts = new std::vector<BOLT*>();
 
 	
-	BOLT* bolt = new Anchor(480,480);	
-	Bolts->push_back(bolt);
-	bolt = new Anchor(800,480);	
-	Bolts->push_back(bolt);
+	BOLT* bolt1 = new Anchor(480,480);	
+	Bolts->push_back(bolt1);
+	BOLT* bolt2 = new Anchor(640,480);	
+	Bolts->push_back(bolt2);
+	BOLT* bolt3 = new BOLT(560,640);
+	Bolts->push_back(bolt3);
+	AddGirder(bolt1,bolt3);
+	AddGirder(bolt2,bolt3);
 
 
 	RoadLevel = 480;
@@ -68,8 +72,10 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 	for( int i = 0; i < Bolts->size(); i++ )
 	{
 		BOLT* Bolt = (*Bolts)[i];
-		Bolt->forceX *= damping;
-		Bolt->forceY *= damping;
+		Bolt->forceX =0;//*= damping;
+		Bolt->forceY =0;//*= damping;
+		Bolt->JustAppliedForceX = 0;
+		Bolt->JustAppliedForceY = 0;
 		Bolt->VelocityX*= damping;
 		Bolt->VelocityY*= damping;
 	}
@@ -83,8 +89,14 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 		Girder* girder = (*Girders)[i];
 		if( girder->isActive )
 		{
-			girder->Bolt1->JustAppliedForceY += weight / 2;
-			girder->Bolt2->JustAppliedForceY += weight / 2;
+			//if( girder->Bolt1->CanMove() )
+			//{
+				girder->Bolt1->forceY += weight / 2;
+			//}
+			//if( girder->Bolt2->CanMove() )
+			//{
+				girder->Bolt2->forceY += weight / 2; 
+			//}
 		}
 	}
 
@@ -127,7 +139,7 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 		girder->Bolt2->JustAppliedForceY += forceY;
 	}*/
 
-	for( int i = 0; i < Girders->size(); i++ )
+	/*for( int i = 0; i < Girders->size(); i++ )
 	{
 		Girder* girder = (*Girders)[i];
 		if( !girder->isActive )
@@ -139,7 +151,7 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 		{
 			girder->isActive = false;
 		}
-	}
+	}*/
 
 
 	//go through the bolts and apply forces to their neighbors
@@ -153,9 +165,9 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 				//they don't need to transfer force to others
 				//Bolt->JustAppliedForceX = 0;
 				//Bolt->JustAppliedForceY = 0;
-				Bolt->forceX =0;
-				Bolt->forceY = 0;
-				continue;
+				//Bolt->forceX =0;
+				//Bolt->forceY = 0;
+				//continue;
 			}
 			for(int j = 0; j < Bolt->AttachedGirders.size(); j++ )
 			{
@@ -176,18 +188,37 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 			
 				//now vector project my force onto the neighbor
 				float currentLength = GetBoltDistance( Bolt, OtherBolt );
-				float NormalizedX = (  Bolt->x - OtherBolt->x )/ currentLength;
-				float NormalizedY = (  Bolt->y - OtherBolt->y )/ currentLength;
+				float NormalizedX = (  OtherBolt->x - Bolt->x )/ currentLength;
+				float NormalizedY = (  OtherBolt->y - Bolt->y )/ currentLength;
 				float ForceMagnitude = Bolt->forceX*NormalizedX + Bolt->forceY*NormalizedY;
+				if( ForceMagnitude == 0 )
+				{
+					continue;
+				}
+				float CorrectionFactor = Bolt->forceY/(ForceMagnitude*NormalizedY);
+				//ForceMagnitude = ForceMagnitude* CorrectionFactor;
+				if( fabs(ForceMagnitude) >200 )
+				{
+					//the girder just broke
+					Bolt->AttachedGirders[j]->isActive = false;
+					fprintf(stderr, "Girder Broke\n" );
+					continue;
+				}
+
 				OtherBolt->JustAppliedForceX+= ForceMagnitude*NormalizedX;
 				OtherBolt->JustAppliedForceY+= ForceMagnitude*NormalizedY;
 				Bolt->JustAppliedForceX -= ForceMagnitude*NormalizedX;
 				Bolt->JustAppliedForceY -= ForceMagnitude*NormalizedY;
+				if( Bolt->CanMove() )
+				{
+					//fprintf(stderr, "Bolt %d\nNormal X: %f Force X: %f \tNormal Y: %f Force Y: %f \nForce Magnitude: %f\n",j,NormalizedX, Bolt->forceX,NormalizedY, Bolt->forceY, ForceMagnitude );
+					//fprintf(stderr, "AppliedForce X: %f \tAppliedForce Y: %f\n",ForceMagnitude*NormalizedX, ForceMagnitude*NormalizedY );
+				}
 				if( !OtherBolt->CanMove() )
 				{
 					//anchors eat all force from their neighbors
-					Bolt->JustAppliedForceX = 0;
-					Bolt->JustAppliedForceY = 0;
+					//Bolt->JustAppliedForceX = 0;
+					//Bolt->JustAppliedForceY = 0;
 				}
 
 			}
@@ -198,8 +229,11 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 			BOLT* Bolt = (*Bolts)[i];
 			Bolt->forceX+=Bolt->JustAppliedForceX;
 			Bolt->forceY+=Bolt->JustAppliedForceY;
+			Bolt->JustAppliedForceX = 0;
+			Bolt->JustAppliedForceY = 0;
 			fprintf(stderr, "Bolt %d\nForce X: %f \t Force Y: %f \n",i, Bolt->forceX, Bolt->forceY );
 		}
+		fprintf(stderr, "\n");
 	}
 
 
@@ -213,6 +247,7 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 			//Bolt->VelocityY+= Bolt->forceY*DeltaTime;
 			Bolt->x += Bolt->forceX*DeltaTime;
 			Bolt->y += Bolt->forceY*DeltaTime;
+			//fprintf(stderr, "Loc X: %f\tLoc Y: %f\n",Bolt->x, Bolt->y );
 		}
 	}
 
