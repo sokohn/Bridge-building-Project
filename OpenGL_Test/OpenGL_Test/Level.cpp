@@ -101,7 +101,7 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 	}
 
 	//go through the bolts and apply forces to their neighbors
-	for( int z =0; z < 1; z++ )
+	/*for( int z =0; z < 1; z++ )
 	{
 		for( int i = 0; i < Bolts->size(); i++ )
 		{
@@ -197,18 +197,18 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 
 			}
 		}
+	}*/
+	//run through all of the bolts and print out the forces acting on them
+	for( int i = 0; i < Bolts->size(); i++ )
+	{
+		BOLT* Bolt = (*Bolts)[i];
+		Bolt->forceX+=Bolt->JustAppliedForceX;
+		Bolt->forceY+=Bolt->JustAppliedForceY;
+		Bolt->JustAppliedForceX = 0;
+		Bolt->JustAppliedForceY = 0;
+		//fprintf(stderr, "Bolt %d\nForce X: %f \t Force Y: %f \n",i, Bolt->forceX, Bolt->forceY );
 	}
-		//run through all of the bolts and print out the forces acting on them
-		for( int i = 0; i < Bolts->size(); i++ )
-		{
-			BOLT* Bolt = (*Bolts)[i];
-			Bolt->forceX+=Bolt->JustAppliedForceX;
-			Bolt->forceY+=Bolt->JustAppliedForceY;
-			Bolt->JustAppliedForceX = 0;
-			Bolt->JustAppliedForceY = 0;
-			//fprintf(stderr, "Bolt %d\nForce X: %f \t Force Y: %f \n",i, Bolt->forceX, Bolt->forceY );
-		}
-		//fprintf(stderr, "\n");
+	//fprintf(stderr, "\n");
 
 	//move move the bolts
 	for( int i = 0; i < Bolts->size(); i++ )
@@ -226,6 +226,10 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 			float NetForce = 0;
 			if(Bolt->GetNumActiveGirders() > 0 )
 			{
+				float StartingX = Bolt->x;
+				float StartingY = Bolt->y;
+				float TotalDisplacementX = 0;
+				float TotalDisplacementY = 0;
 				int Iterations = 0;
 				do
 				{
@@ -257,12 +261,14 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 						}
 					}
 					//now lets offload as much off of force onto this girder as we can
-					float DisplacementX = Bolt->forceX / 10;
-					float DisplacementY = Bolt->forceY / 10;
+					float DisplacementX = Bolt->forceX / 20;
+					float DisplacementY = Bolt->forceY / 20;
 					Bolt->forceX = 0;
 					Bolt->forceY = 0;
 					Bolt->x +=DisplacementX;
 					Bolt->y +=DisplacementY;
+					TotalDisplacementX +=DisplacementX;
+					TotalDisplacementY +=DisplacementY;
 					//now see how much force is now in the system with this new displacement
 					for(int j = 0; j < Bolt->AttachedGirders.size(); j++ )
 					{
@@ -294,8 +300,14 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 					}
 					Iterations++;
 					NetForce = Bolt->forceX*Bolt->forceX + Bolt->forceY*Bolt->forceY;
-				}while(Iterations < 10 && fabs(NetForce) > 4 );
-				fprintf(stderr, "\n");
+				}while(Iterations < 20 && fabs(NetForce) > 4 );
+				if( NetForce > 4)
+				{
+					//things went to shit, so lets try to average it out
+					Bolt->x = StartingX + TotalDisplacementX/Iterations;
+					Bolt->y = StartingY + TotalDisplacementY/Iterations;
+				}
+				fprintf(stderr, "Bolt %d\tIterations: %d\tNet Force: %f\n",i, Iterations, NetForce);
 			}
 		}
 	}
