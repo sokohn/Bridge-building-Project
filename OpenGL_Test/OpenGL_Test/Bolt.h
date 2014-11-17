@@ -32,6 +32,7 @@ public:
 
 	float GetDrawX();
 	float GetDrawY();
+	int GetNumActiveGirders();
 	virtual void GetDrawColor( Color* color );
 	virtual bool CanBeDeleted();
 	virtual bool CanMove();
