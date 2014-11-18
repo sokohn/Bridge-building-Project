@@ -26,6 +26,10 @@ public:
 	void StartSimulation();
 	void EndSimulation();
 
+	void SerializeLevel(char* FileName);
+	void DeserializeLevel(char* FileName);
+
+
 private:
 	int MaxMoney;
 	int CurrentlySpentMoney;
@@ -33,6 +37,6 @@ private:
 
 	bool CheckIfRoad( Girder* girder );
 	void DrawRoad();
-
+	BOLT* AddBolt(float x, float y, bool IsAnchor);
 
 };

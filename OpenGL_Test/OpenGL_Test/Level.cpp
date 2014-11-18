@@ -3,6 +3,8 @@
 #include <GL\glew.h>
 #include <GL\freeglut.h>
 #include <iostream>
+#include <iomanip>
+#include <fstream>
 #include <math.h>
 #include "Bolt.h"
 #include "Girder.h"
@@ -261,8 +263,8 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 						}
 					}
 					//now lets offload as much off of force onto this girder as we can
-					float DisplacementX = Bolt->forceX / 20;
-					float DisplacementY = Bolt->forceY / 20;
+					float DisplacementX = Bolt->forceX / 11;
+					float DisplacementY = Bolt->forceY / 11;
 					Bolt->forceX = 0;
 					Bolt->forceY = 0;
 					Bolt->x +=DisplacementX;
@@ -300,8 +302,8 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 					}
 					Iterations++;
 					NetForce = Bolt->forceX*Bolt->forceX + Bolt->forceY*Bolt->forceY;
-				}while(Iterations < 20 && fabs(NetForce) > 4 );
-				if( NetForce > 4)
+				}while(Iterations < 20 && fabs(NetForce) > 100 );
+				if( NetForce > 9)
 				{
 					//things went to shit, so lets try to average it out
 					Bolt->x = StartingX + TotalDisplacementX/Iterations;
@@ -419,6 +421,17 @@ void LEVEL::Draw()
 		glColor3f( color.red ,color.green ,color.blue );  
 		glVertex3f( Bolt->GetDrawX(), Bolt->GetDrawY(), 0.0f );
 		glEnd();       
+		glPopMatrix();
+
+		glPushMatrix();
+		glLoadIdentity();
+		glColor3f(1.0f, 0.0f, 0.0f);
+		glRasterPos2f(Bolt->GetDrawX()+10, Bolt->GetDrawY()+10);
+		char BoltNum[5];
+		int len = sprintf(BoltNum,"%d",i);
+		for (int i = 0; i < len; i++) {
+			glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_10, BoltNum[i]);
+		}
 		glPopMatrix();
 
 		//now draw the force diagrams
@@ -546,6 +559,32 @@ bool LEVEL::RemoveGirder()
 	return true;
 }
 
+BOLT* LEVEL::AddBolt(float x, float y, bool IsAnchor)
+{
+	float BoltLocX = RoundToNearestGridMarker(x); 
+	float BoltLocY = RoundToNearestGridMarker(y);
+	BOLT* Bolt = NULL;
+
+	for(int i =0; i < Bolts->size(); i++ )
+	{
+		if( (*Bolts)[i]->x == BoltLocX && (*Bolts)[i]->y == BoltLocY )
+		{
+			fprintf(stderr, "Bolts merged\n");
+			return (*Bolts)[i];
+		}
+	}
+	if( IsAnchor )
+	{
+		Bolt = new Anchor( BoltLocX , BoltLocY );
+	}
+	else
+	{
+		Bolt = new BOLT( BoltLocX , BoltLocY );
+	}
+	Bolts->push_back(Bolt);
+	return Bolt;
+}
+
 bool LEVEL::RemoveBolt( BOLT* bolt )
 {
 	if(IsSimulating())
@@ -590,7 +629,7 @@ bool LEVEL::RemoveBolt( BOLT* bolt )
 	bolt->AttachedGirders.clear();
 				
 	//now remove this bolt from the bolts vector
-	for( std::vector<BOLT*>::iterator it = Bolts->begin() ; it != Bolts->end(); ++it )
+	for( std::vector<BOLT*>::iterator it = Bolts->begin() ; it != Bolts->end(); it++ )
 	{
 		if( (*it) == bolt )
 		{
@@ -639,4 +678,152 @@ void LEVEL::EndSimulation()
 		(*Bolts)[i]->forceY = 0.0;
 
 	}
+}
+
+void LEVEL::DeserializeLevel(char* FileName)
+{
+	if(IsSimulating() )
+	{
+		SetSimulating(false);
+	}
+
+	//now clear out the existing level
+	while(!Bolts->empty())
+	{
+		BOLT* Bolt = Bolts->back();
+		RemoveBolt(Bolt);
+	}
+
+	if(!Bolts->empty())
+	{
+		fprintf(stderr, "Didn't delete all of the bolts\n");
+		Bolts->clear();
+	}
+	if(!Girders->empty())
+	{
+		fprintf(stderr, "Didn't delete all of the Girders\n");
+		Girders->clear();
+	}
+
+	std::ifstream Deserializer(FileName);
+	if( !Deserializer.good() )
+	{
+		fprintf(stderr, "Couldn't open the file\n");
+		return;
+	}
+
+	char Text[50];
+	//Todo: Convert to enum?
+	bool IsBolt = false;
+	bool IsAnchor = false;
+	bool IsGirder = false;
+	while( !Deserializer.eof() )
+	{
+		IsBolt = false;
+		IsAnchor = false;
+		IsGirder = false;
+		Deserializer.getline(Text,50,':');
+		if(strcmp(Text,"ANCHOR")==0)
+		{
+			IsAnchor = true;
+		}
+		else if( strcmp(Text,"BOLT")==0 )
+		{
+			IsBolt = true;
+		}
+		else if( strcmp(Text,"GIRDER")==0 )
+		{
+			IsGirder = true;
+		}
+		else
+		{
+			//something is weird, skip the line
+			if( Deserializer.fail() )
+			{
+				//we're on the next line, I think
+			}
+			else
+			{
+				//we found something unknown
+				//just go to the next line
+				Deserializer.getline(Text,50);
+			}
+		}
+
+		if( IsBolt || IsAnchor )
+		{
+			float x = 0;
+			float y = 0;
+			//this seems kind of sketchy
+			Deserializer.getline(Text,50,',');
+			x = atof(Text);
+			Deserializer.getline(Text,50);
+			y = atof(Text);
+			AddBolt(x,y,IsAnchor);
+		}
+		else if( IsGirder )
+		{
+			float x = 0;
+			float y = 0;
+			//this seems kind of sketchy
+			Deserializer.getline(Text,50,',');
+			x = atof(Text);
+			Deserializer.getline(Text,50,':');
+			y = atof(Text);
+			BOLT* Bolt = AddBolt(x,y,IsAnchor);
+			Deserializer.getline(Text,50,',');
+			x = atof(Text);
+			Deserializer.getline(Text,50);
+			y = atof(Text);
+			AddGirder(Bolt, x, y );
+		}
+	}
+	Deserializer.close();
+}
+
+void LEVEL::SerializeLevel(char* FileName)
+{
+	if(IsSimulating() )
+	{
+		SetSimulating(false);
+	}
+	//serializes the currently loaded level out to a file
+	FILE* File = std::fopen(FileName, "w");
+	std::fclose(File);
+	std::ofstream Serializer(FileName);
+
+	if(!Serializer.good())
+	{
+		fprintf(stderr, "Couldn't open the file\n");
+		return;
+	}
+
+	//go through the bolts and output their locations
+	for(int i =0; i < Bolts->size(); i++ )
+	{
+		BOLT* Bolt = (*Bolts)[i];
+		if(Bolt->CanMove() )
+		{
+			Serializer<<"BOLT:";
+		}
+		else
+		{
+			Serializer<<"ANCHOR:";
+		}
+		Serializer<<std::setprecision(0);
+		
+		Serializer<<Bolt->x<<","<<Bolt->y<<std::endl;
+	}
+
+	//and now the girders
+	for(int i =0; i < Girders->size(); i++ )
+	{
+		Girder* girder = (*Girders)[i];
+		
+		Serializer<<"GIRDER:";
+		Serializer<<std::setprecision(0);
+		Serializer<<girder->Bolt1->x<<","<<girder->Bolt1->y<<":"<<girder->Bolt2->x<<","<<girder->Bolt2->y<<std::endl;
+	}
+	Serializer.flush();
+	Serializer.close();
 }

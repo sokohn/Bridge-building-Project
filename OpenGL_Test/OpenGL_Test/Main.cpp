@@ -258,6 +258,14 @@ void HandleKeyboard(unsigned char key, int x, int y)
 			SetPaused( !IsPaused() );
 		}
 	}
+	else if( key == 'v' || key == 'V' )
+	{
+		Level.SerializeLevel("TestFile.txt");
+	}
+	else if( key == 'l' || key == 'L' )
+	{
+		Level.DeserializeLevel("TestFile.txt");
+	}
 }
 
 int main( int argc, char** argv)
