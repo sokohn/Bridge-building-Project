@@ -15,6 +15,7 @@ public:
 	void Update(float DeltaTime);
 
 	void SimulatePhysics( float DeltaTime );
+	void SimulatePhyscis2( float DeltaTime );
 
 	void Draw();
 

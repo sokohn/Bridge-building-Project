@@ -18,16 +18,8 @@ LEVEL::LEVEL()
 	Girders = new std::vector<Girder*>();
 	Bolts = new std::vector<BOLT*>();
 
-	
-	BOLT* bolt1 = new Anchor(480,480);	
-	Bolts->push_back(bolt1);
-	BOLT* bolt2 = new Anchor(640,480);	
-	Bolts->push_back(bolt2);
-	BOLT* bolt3 = new BOLT(560,640);
-	Bolts->push_back(bolt3);
-	AddGirder(bolt1,bolt3);
-	AddGirder(bolt2,bolt3);
-
+	AddBolt(480,480, false);
+	AddBolt(640,480, false);
 
 	RoadLevel = 480;
 
@@ -40,7 +32,7 @@ void LEVEL::Update(float DeltaTime)
 	//deal with the delta time later when we get to actually simulating physics
 	if( IsSimulating() && !IsPaused() )
 	{
-		SimulatePhysics(DeltaTime);
+		SimulatePhyscis2(DeltaTime);
 	}
 
 	//iterate through all of the bolts and see if we are within the collision radius of one of them
@@ -316,6 +308,231 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 
 }
 
+static bool Started =false;
+//this physics system is based off of the one from the west point bridge design and contest
+void LEVEL::SimulatePhyscis2( float DeltaTime )
+{
+	if( !Started )
+	{
+		Started = true;
+	}
+	else
+	{
+		//return;
+	}
+    int nEquations = 2 * Bolts->size();
+		
+   float* length = (float*) calloc(Girders->size() , sizeof(float) );
+   float* cosX = (float*) calloc(Girders->size() , sizeof(float) );
+   float* cosY = (float*) calloc(Girders->size() , sizeof(float) );
+	
+
+   for( int i = 0; i < Bolts->size(); i++ )
+	{
+		BOLT* Bolt = (*Bolts)[i];
+		Bolt->forceX =0;
+		Bolt->forceY =0;
+	}
+
+    for (int i = 0; i < Girders->size(); i++) 
+	{
+		float dx = (*Girders)[i]->Bolt2->x - (*Girders)[i]->Bolt1->x;
+        float dy = (*Girders)[i]->Bolt2->y - (*Girders)[i]->Bolt1->y;
+        length[i] = sqrt( dx*dx + dy*dy );
+        cosX[i] = dx / length[i];
+        cosY[i] = dy / length[i];
+
+		if ( !(*Girders)[i]->isActive ) 
+		{
+            continue;
+        }
+        float deadLoad = DeltaTime;
+		(*Girders)[i]->Bolt1->forceY -= deadLoad;
+		(*Girders)[i]->Bolt2->forceY -= deadLoad;
+    }
+		
+	//add train load here to the joints of the girders it is touching
+		
+	//determine the strength of each connection
+	//it goes through each girder 
+   // double stiffness[][] = new double[nEquations][nEquations];
+	float* stiffness = (float*) calloc( nEquations*nEquations, sizeof(float) );
+    for (int i = 0; i < Girders->size(); i++) 
+	{
+		Girder* girder = (*Girders)[i];
+        float e = 1;
+		if ( !girder->isActive ) 
+		{
+            e = 0;
+        }
+        double aEOverL = 100.0f;
+        double xx = aEOverL * pow(cosX[i],2);
+        double yy = aEOverL * pow(cosY[i],2);
+        double xy = aEOverL * cosX[i] * cosY[i];
+		int j1 = girder->Bolt1->Index;
+        int j2 = girder->Bolt2->Index;
+        int j1x = 2 * j1;
+        int j1y = 2 * j1 + 1;
+        int j2x = 2 * j2;
+        int j2y = 2 * j2 + 1;
+        stiffness[j1x * nEquations + j1x] += xx;
+        stiffness[j1x * nEquations + j1y] += xy;
+        stiffness[j1x * nEquations + j2x] -= xx;
+        stiffness[j1x * nEquations + j2y] -= xy;
+        stiffness[j1y * nEquations + j1x] += xy;
+        stiffness[j1y * nEquations + j1y] += yy;
+        stiffness[j1y * nEquations + j2x] -= xy;
+        stiffness[j1y * nEquations + j2y] -= yy;
+        stiffness[j2x * nEquations + j1x] -= xx;
+        stiffness[j2x * nEquations + j1y] -= xy;
+        stiffness[j2x * nEquations + j2x] += xx;
+        stiffness[j2x * nEquations + j2y] += xy;
+        stiffness[j2y * nEquations + j1x] -= xy;
+        stiffness[j2y * nEquations + j1y] -= yy;
+        stiffness[j2y * nEquations + j2x] += xy;
+        stiffness[j2y * nEquations + j2y] += yy;
+    }
+	
+	//goes through the anchors, sets the stiffness to 0 (except for maximizing the self connection) and sets the load to 0 in the fixed direction
+	for (int i = 0; i < Bolts->size(); i++ ) 
+	{
+		if ( !(*Bolts)[i]->CanMove() )
+		{
+			int ix = 2 * i;
+			int iy = 2 * i +1;
+			for (int ie = 0; ie < nEquations; ie++) 
+			{
+				stiffness[ix * nEquations + ie] =0;
+				stiffness[ie * nEquations + ix] = 0;
+				stiffness[iy * nEquations + ie] = 0;
+				stiffness[ie * nEquations + iy] = 0;
+			}
+			stiffness[ix * nEquations + ix] = 1;
+			stiffness[iy * nEquations + iy] = 1;
+			(*Bolts)[i]->forceX = 0.0f;
+			(*Bolts)[i]->forceY = 0.0f;
+		}
+	}
+		
+	//we're doing something here, not quite sure what
+    for (int ie = 0; ie < nEquations; ie++) 
+	{
+        double pivot = stiffness[ie * nEquations + ie];
+		if(pivot == 0 )
+		{
+			continue;
+		}
+        double pivr = 1.0 / pivot;
+        for (int k = 0; k < nEquations; k++)
+		{
+            stiffness[ie * nEquations + k] /= pivot;
+        }
+        for (int k = 0; k < nEquations; k++)
+		{
+            if (k != ie) 
+			{
+                pivot = stiffness[k * nEquations + ie];
+                for (int j = 0; j < nEquations; j++) 
+				{
+                    stiffness[k * nEquations + j] -= stiffness[ie * nEquations + j] * pivot;
+                }
+                stiffness[k * nEquations + ie] = -pivot * pivr;
+            }
+        }
+        stiffness[ie * nEquations + ie] = pivr;
+
+		if( ie%2 == 0 )
+		{
+			//fprintf(stderr, "Bolt %d:  \tstiffness X: %f ", ie/2, pivr);
+		}
+		else
+		{
+			//fprintf(stderr, "stiffness Y: %f\n", pivr);
+		}
+    }
+
+	float* jointDisplacementX = (float*) calloc(Bolts->size(), sizeof(float));
+	float* jointDisplacementY = (float*) calloc(Bolts->size(), sizeof(float));
+
+	for(int i = 0; i < Bolts->size(); i++ )
+	{
+		float tempX = 0;
+		float tempY = 0;
+		for(int j = 0; j < Bolts->size(); j++ )
+		{
+			tempX += stiffness[2*i* nEquations + j*2] * (*Bolts)[j]->forceX;
+			tempY += stiffness[( ( 2*i ) + 1 ) * nEquations + ( j*2 ) +1 ] * (*Bolts)[j]->forceY;
+		}
+		jointDisplacementX[i] = tempX;
+		jointDisplacementY[i] = tempY;
+		
+		fprintf(stderr, "Bolts %d:\tMovement X: %f\tMovement Y: %f\n",i,tempX,tempY);
+	}
+	for(int i =0; i <  Bolts->size() -2; i++ )
+	{
+		float Diff1x = jointDisplacementX[i + 1] - jointDisplacementX[i];
+		float Diff2x = jointDisplacementX[i + 2] - jointDisplacementX[i +1];
+		float Diff1y = jointDisplacementY[i + 1] - jointDisplacementY[i];
+		float Diff2y = jointDisplacementY[i + 2] - jointDisplacementY[i +1];
+
+		fprintf(stderr, "Diff %d:\tMovement X: %f\tMovement Y: %f\n", i, Diff2x - Diff1x,  Diff2y - Diff1y );
+	}
+
+    // Compute member forces.
+    /*for (int i = 0; i < Girders->size(); i++) 
+	{
+        Girder* girder = (*Girders)[i];
+        float e = 1;
+		if ( !girder->isActive ) 
+		{
+            e = 0;
+        }
+        float aEOverL = 100.0f;
+		int ija = girder->Bolt1->Index;
+        int ijb = girder->Bolt2->Index;
+		girder->CurrentStress = aEOverL* ( ( cosX[i] * ( jointDisplacementX[ijb] - jointDisplacementX[ija] ) ) + (cosY[i] * (jointDisplacementY[ijb] - jointDisplacementY[ija] ) ) );
+		if( fabs(girder->CurrentStress) > fabs(girder->MaxStress) )
+		{
+			girder->MaxStress = girder->CurrentStress;
+		}
+    }*/
+
+	for(int i = 0; i < Bolts->size(); i++ )
+	{
+		(*Bolts)[i]->x = (*Bolts)[i]->x + jointDisplacementX[i];
+		(*Bolts)[i]->y = (*Bolts)[i]->y + jointDisplacementY[i];
+	}
+
+	for(int j = 0; j < Girders->size(); j++ )
+	{
+		Girder* girder = (*Girders)[j];
+		if( !girder->isActive )
+		{
+			continue;
+		}
+		//find the other bolt
+
+		float currentLength = GetBoltDistance( girder->Bolt1, girder->Bolt2 );
+		float stress = girder->GetStressForce( currentLength );
+		girder->CurrentStress = stress;
+		if( fabs(girder->CurrentStress) > fabs(girder->MaxStress) )
+		{
+			girder->MaxStress = girder->CurrentStress;
+		}
+		if( fabs(girder->CurrentStress) > Girder::GirderStrength )
+		{
+			girder->isActive = false;
+		}
+	}
+
+	delete length;
+	delete cosX;
+	delete cosY;
+	delete stiffness;
+	delete jointDisplacementX;
+	delete jointDisplacementY;
+}
+
 void drawGrid()
 {
 	int NumLines = ( Screen.width/ ZoomLevel )/GridSpacing;
@@ -504,10 +721,9 @@ Girder* LEVEL::AddGirder( BOLT* Bolt1, float x, float y )
 
 	Girder* girder = new Girder();
 	girder->Bolt1 = Bolt1;
-	girder->Bolt2 = new BOLT( BoltLocX , BoltLocY );
+	girder->Bolt2 = AddBolt(BoltLocX,BoltLocY, false);
 	girder->isFinished = true;
 	Girders->push_back(girder);
-	Bolts->push_back(girder->Bolt2);
 	
 	//now add it to the its bolts
 	girder->Bolt1->AttachedGirders.push_back(girder);
@@ -582,6 +798,7 @@ BOLT* LEVEL::AddBolt(float x, float y, bool IsAnchor)
 		Bolt = new BOLT( BoltLocX , BoltLocY );
 	}
 	Bolts->push_back(Bolt);
+	Bolt->Index = Bolts->size() -1;
 	return Bolt;
 }
 

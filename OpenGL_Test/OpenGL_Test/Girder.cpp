@@ -3,6 +3,7 @@
 #include <math.h>
 #include "Util.h"
 
+float Girder::GirderStrength = 50.0f;
 
 void Girder::GetDrawColor( Color* color )
 {
@@ -26,7 +27,7 @@ void Girder::GetDrawColor( Color* color )
 				UsedStressor = MaxStress;
 			}
 			color->red = maxf(-1.0f*UsedStressor/GirderStrength,0);
-			color->green = ( GirderStrength - UsedStressor*2 ) / GirderStrength;
+			color->green = maxf( ( GirderStrength - UsedStressor*4 ) / GirderStrength, 0);
 			color->blue = maxf(UsedStressor/GirderStrength,0);
 		}
 		else if( isRoad )

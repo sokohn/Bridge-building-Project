@@ -22,6 +22,8 @@ public:
 	float VelocityX;
 	float VelocityY;
 
+	int Index;
+
 	bool Highlighted;
 	std::vector<Girder*> AttachedGirders;
 
