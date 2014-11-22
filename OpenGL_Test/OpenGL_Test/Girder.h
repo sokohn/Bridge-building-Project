@@ -20,6 +20,7 @@ public:
 	float MaxStress;
 
 	bool isActive;
+	int Index;
 
 	static const int GirderWeight = 100;
 	static float GirderStrength;

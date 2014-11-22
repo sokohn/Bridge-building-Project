@@ -20,7 +20,7 @@ void Girder::GetDrawColor( Color* color )
 			float UsedStressor = 0;
 			if( IsSimulating() )
 			{
-				UsedStressor = CurrentStress;
+				UsedStressor = MaxStress;
 			}
 			else
 			{
