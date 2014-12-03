@@ -8,6 +8,7 @@
 #include <math.h>
 #include "Bolt.h"
 #include "Girder.h"
+#include "Land.h"
 #include "Level.h"
 #include "Util.h"
 
@@ -17,6 +18,13 @@ LEVEL::LEVEL()
 {
 	Girders = new std::vector<Girder*>();
 	Bolts = new std::vector<BOLT*>();
+	Land = new LAND(-2000, 4000, 480, 0 );
+
+	Land->AddPoint(480,480);
+	Land->AddPoint(481,240);
+	Land->AddPoint(640,240);
+	Land->AddPoint(641,480);
+	Land->AddPoint(320,600);
 
 	AddBolt(480,480, true);
 	AddBolt(640,480, true);
@@ -32,7 +40,7 @@ void LEVEL::Update(float DeltaTime)
 	//deal with the delta time later when we get to actually simulating physics
 	if( IsSimulating() && !IsPaused() )
 	{
-		SimulatePhysics(DeltaTime);
+		//SimulatePhysics(DeltaTime);
 	}
 
 	//iterate through all of the bolts and see if we are within the collision radius of one of them
@@ -668,6 +676,11 @@ void drawGrid()
 	glPopMatrix();
 }
 
+void LEVEL::drawLand()
+{
+	Land->DrawLand();
+}
+
 void LEVEL::DrawRoad()
 {
 	glLoadIdentity();
@@ -684,9 +697,11 @@ void LEVEL::DrawRoad()
 
 void LEVEL::Draw()
 {
-	drawGrid();
+	//drawGrid();
 
-	DrawRoad();
+	drawLand();
+
+	//DrawRoad();
 
 	for(int i =0; i< Bolts->size(); i++ )
 	{

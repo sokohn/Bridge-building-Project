@@ -3,14 +3,16 @@
 
 class Girder;
 class BOLT;
+class LAND;
 
 class LEVEL
 {
 public:
+	LEVEL();
+
 	std::vector<Girder*>* Girders;
 	std::vector<BOLT*>* Bolts;
-
-	LEVEL();
+	LAND* Land;
 
 	void Update(float DeltaTime);
 
@@ -18,6 +20,7 @@ public:
 	void SimulatePhyscis2( float DeltaTime );
 
 	void Draw();
+	void drawLand();
 
 	Girder* AddGirder( BOLT* Bolt1, float x, float y );
 	Girder* AddGirder( BOLT* Bolt1, BOLT* Bolt2 );
