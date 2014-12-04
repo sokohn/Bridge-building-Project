@@ -58,7 +58,7 @@ void LAND::DrawLand()
 	for(int i =0; i<LandTriangles->size(); i++ )
 	{
 		glPushMatrix();
-		glBegin(GL_LINE_LOOP);
+		glBegin(GL_TRIANGLES);
 		glColor3f( 0.2f, 0.1f, 0.0f );
 		glVertex3f( ((*LandTriangles)[i])->P1->x, ((*LandTriangles)[i])->P1->y, 0.0f );
 		glVertex3f( ((*LandTriangles)[i])->P2->x, ((*LandTriangles)[i])->P2->y, 0.0f );
@@ -183,20 +183,17 @@ void LAND::ConstructTriangles()
 		{
 			bool FoundEar = true;
 			//now go through all of the nodes and see if they are inside the triangle, if none are, then we add the triangle and prune the middle node
-			EarNode* TestNode = List.Head;
-			do
+			for(int i =0; i < Land->size(); i++)
 			{
-				if( TestNode != Node && TestNode != Node->Next && TestNode != Node->Prev )
+				if( (*Land)[i] != Node->Point && (*Land)[i] != Node->Prev->Point && (*Land)[i] != Node->Next->Point )
 				{
-					if( IsPointInTriangle( TestNode->Point, Node->Prev->Point, Node->Point, Node->Next->Point) )
+					if( IsPointInTriangle( (*Land)[i], Node->Prev->Point, Node->Point, Node->Next->Point) )
 					{
 						FoundEar = false;
 						break;
 					}
 				}
-
-				TestNode = TestNode->Next;
-			}while(TestNode!= List.Head);
+			}
 
 			if( FoundEar )
 			{

@@ -20,14 +20,11 @@ LEVEL::LEVEL()
 	Bolts = new std::vector<BOLT*>();
 	Land = new LAND(-2000, 4000, 480, 0 );
 
-	Land->AddPoint(480,480);
-	Land->AddPoint(481,240);
-	Land->AddPoint(640,240);
-	Land->AddPoint(641,480);
-	Land->AddPoint(320,600);
+	Land->AddPoint(520,240);
+	Land->AddPoint(920,240);
 
 	AddBolt(480,480, true);
-	AddBolt(640,480, true);
+	AddBolt(960,480, true);
 
 	RoadLevel = 480;
 
@@ -697,11 +694,11 @@ void LEVEL::DrawRoad()
 
 void LEVEL::Draw()
 {
-	//drawGrid();
+	drawGrid();
 
 	drawLand();
 
-	//DrawRoad();
+	DrawRoad();
 
 	for(int i =0; i< Bolts->size(); i++ )
 	{
@@ -871,6 +868,8 @@ BOLT* LEVEL::AddBolt(float x, float y, bool IsAnchor)
 	if( IsAnchor )
 	{
 		Bolt = new Anchor( BoltLocX , BoltLocY );
+		//also add land point at the anchor
+		Land->AddPoint(BoltLocX,BoltLocY);
 	}
 	else
 	{
