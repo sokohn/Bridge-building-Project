@@ -37,7 +37,7 @@ void LEVEL::Update(float DeltaTime)
 	//deal with the delta time later when we get to actually simulating physics
 	if( IsSimulating() && !IsPaused() )
 	{
-		//SimulatePhysics(DeltaTime);
+		SimulatePhysics(DeltaTime);
 	}
 
 	//iterate through all of the bolts and see if we are within the collision radius of one of them
@@ -71,12 +71,12 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 	for( int i = 0; i < Bolts->size(); i++ )
 	{
 		BOLT* Bolt = (*Bolts)[i];
-		Bolt->forceX =0;//*= damping;
-		Bolt->forceY =0;//*= damping;
+		Bolt->forceX = 0;
+		Bolt->forceY = 0;
 		Bolt->JustAppliedForceX = 0;
 		Bolt->JustAppliedForceY = 0;
-		Bolt->VelocityX*= damping;
-		Bolt->VelocityY*= damping;
+		//Bolt->VelocityX*= damping;
+		//Bolt->VelocityY*= damping;
 	}
 
 	// apply gravity to bolts
@@ -90,129 +90,46 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 		{
 			if( girder->Bolt1->CanMove() )
 			{
-				girder->Bolt1->forceY +=DeltaTime* weight / 2;
+				girder->Bolt1->forceY +=weight / 2;
 			}
 			if( girder->Bolt2->CanMove() )
 			{
-				girder->Bolt2->forceY += DeltaTime*weight / 2; 
+				girder->Bolt2->forceY +=weight / 2; 
 			}
 		}
-	}
 
-	//go through the bolts and apply forces to their neighbors
-	for( int z =0; z < 1; z++ )
-	{
-		for( int i = 0; i < Bolts->size(); i++ )
+		//also update the stresses while we're at it
+		if (girder->isActive)
 		{
-			BOLT* Bolt = (*Bolts)[i];
-			if( !Bolt->CanMove() )
+			girder->CurrentStress = girder->GetStressForce(girder->getCurrentLength());
+			if (fabs(girder->CurrentStress) > fabs(girder->MaxStress))
 			{
-				//they don't need to transfer force to others
-				Bolt->JustAppliedForceX = 0;
-				Bolt->JustAppliedForceY = 0;
-				Bolt->forceX =0;
-				Bolt->forceY = 0;
-				continue;
+				girder->MaxStress = girder->CurrentStress;
 			}
-			if( Bolt->AttachedGirders.size() == 0 )
+			if (fabs(girder->CurrentStress) > Girder::GirderStrength)
 			{
-				continue;
-			}
-			float TotalContributionX= 0;
-			float TotalContributionY= 0;
-			for(int j = 0; j < Bolt->AttachedGirders.size(); j++ )
-			{
-				if( !Bolt->AttachedGirders[j]->isActive )
-				{
-					continue;
-				}
-				//find the other bolt
-				BOLT* OtherBolt = NULL;
-				if( Bolt->AttachedGirders[j]->Bolt1 == Bolt )
-				{
-					OtherBolt = Bolt->AttachedGirders[j]->Bolt2;
-				}
-				else
-				{
-					OtherBolt = Bolt->AttachedGirders[j]->Bolt1;
-				}
-			
-				//now vector project my force onto the neighbor
-				float currentLength = GetBoltDistance( Bolt, OtherBolt );
-				float NormalizedX = (  OtherBolt->x - Bolt->x )/ currentLength;
-				float NormalizedY = (  OtherBolt->y - Bolt->y )/ currentLength;
-				if( NormalizedY != 0 || currentLength == 0 )
-				{
-					TotalContributionY+=NormalizedY;
-				}
-				if( NormalizedX != 0 || currentLength == 0 )
-				{
-					TotalContributionX+=NormalizedX;
-				}
-			}
-			//fprintf(stderr, "Bolt %d\tContribution X: %f Contribution X: %f\n",i,TotalContributionX, TotalContributionY );
-			//TotalContribution = sqrt(TotalContribution);
-
-			for(int j = 0; j < Bolt->AttachedGirders.size(); j++ )
-			{
-				if( !Bolt->AttachedGirders[j]->isActive )
-				{
-					continue;
-				}
-				//find the other bolt
-				BOLT* OtherBolt = NULL;
-				if( Bolt->AttachedGirders[j]->Bolt1 == Bolt )
-				{
-					OtherBolt = Bolt->AttachedGirders[j]->Bolt2;
-				}
-				else
-				{
-					OtherBolt = Bolt->AttachedGirders[j]->Bolt1;
-				}
-
-				float TotalForce = sqrt(Bolt->forceX*Bolt->forceX+Bolt->forceY*Bolt->forceY);
-			
-				//now vector project my force onto the neighbor
-				float currentLength = GetBoltDistance( Bolt, OtherBolt );
-				float NormalizedX = (  OtherBolt->x - Bolt->x )/ currentLength;
-				float NormalizedY = (  OtherBolt->y - Bolt->y )/ currentLength;
-				float ForceX = TotalForce*NormalizedX;
-				float ForceY = TotalForce*NormalizedY;
-
-
-				//figure which direction has can handle less 
-
-
-				OtherBolt->JustAppliedForceX+= ForceX;//ForceMagnitude*NormalizedX;
-				OtherBolt->JustAppliedForceY+= ForceY;//ForceMagnitude*NormalizedY;
-				Bolt->JustAppliedForceX -= ForceX;//ForceMagnitude*NormalizedX;
-				Bolt->JustAppliedForceY -= ForceY;//ForceMagnitude*NormalizedY;
-				if( Bolt->CanMove() )
-				{
-					//fprintf(stderr, "Bolt %d\nNormal X: %f Force X: %f \tNormal Y: %f Force Y: %f \nForce Magnitude: %f\n",j,NormalizedX, Bolt->forceX,NormalizedY, Bolt->forceY, ForceMagnitude );
-					//fprintf(stderr, "AppliedForce X: %f \tAppliedForce Y: %f\n",ForceMagnitude*NormalizedX, ForceMagnitude*NormalizedY );
-				}
-				if( !OtherBolt->CanMove() )
-				{
-					//anchors eat all force from their neighbors
-					//Bolt->JustAppliedForceX = 0;
-					//Bolt->JustAppliedForceY = 0;
-				}
-
+				//girder->isActive = false;
 			}
 		}
 	}
-	//run through all of the bolts and print out the forces acting on them
-	for( int i = 0; i < Bolts->size(); i++ )
+	for (int i = 0; i < Bolts->size(); i++)
 	{
 		BOLT* Bolt = (*Bolts)[i];
-		Bolt->forceX+=Bolt->JustAppliedForceX;
-		Bolt->forceY+=Bolt->JustAppliedForceY;
-		Bolt->JustAppliedForceX = 0;
-		Bolt->JustAppliedForceY = 0;
-		//fprintf(stderr, "Bolt %d\nForce X: %f \t Force Y: %f \n",i, Bolt->forceX, Bolt->forceY );
+		//now go through all of the girders and add in their contributing forces
+		for (int j = 0; j < Bolt->AttachedGirders.size(); j++)
+		{
+			if (!Bolt->AttachedGirders[j]->isActive)
+			{
+				continue;
+			}
+			Bolt->forceX += (Bolt->AttachedGirders[j]->GetStressForce(Bolt->AttachedGirders[j]->getCurrentLength()))
+				* ((Bolt->AttachedGirders[j]->Bolt2->y - Bolt->AttachedGirders[j]->Bolt1->y) / Bolt->AttachedGirders[j]->getCurrentLength());
+			Bolt->forceY += (Bolt->AttachedGirders[j]->GetStressForce(Bolt->AttachedGirders[j]->getCurrentLength()))
+				* ((Bolt->AttachedGirders[j]->Bolt2->x - Bolt->AttachedGirders[j]->Bolt1->x) / Bolt->AttachedGirders[j]->getCurrentLength());
+		}
+		Bolt->forceX += Bolt->VelocityX / Girder::GirderWeight;
+		Bolt->forceY += Bolt->VelocityY / Girder::GirderWeight;
 	}
-	//fprintf(stderr, "\n");
 
 	//move move the bolts
 	for( int i = 0; i < Bolts->size(); i++ )
@@ -220,10 +137,6 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 		BOLT* Bolt = (*Bolts)[i];
 		if(Bolt->CanMove() )
 		{
-			//Bolt->VelocityX+= Bolt->forceX*DeltaTime;
-			//Bolt->VelocityY+= Bolt->forceY*DeltaTime;
-			//Bolt->x += Bolt->forceX;//*DeltaTime;
-			//Bolt->y += Bolt->forceY;//*DeltaTime;
 			//fprintf(stderr, "Loc X: %f\tLoc Y: %f\n",Bolt->x, Bolt->y );
 
 			//instead, lets try to treat this movement as springs
@@ -233,109 +146,8 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 			{
 				float StartingX = Bolt->x;
 				float StartingY = Bolt->y;
-				float TotalDisplacementX = 0;
-				float TotalDisplacementY = 0;
-				int Iterations = 0;
-				do
-				{
-					int BestGirderIndex = 0;
-					float BestDotProduct = 0;
-					float ForceDispersed = 0;
-					float BestNormalizedX = 0;
-					float BestNormalizedY = 0;
-					for(int j = 0; j < Bolt->AttachedGirders.size(); j++ )
-					{
-						if( !Bolt->AttachedGirders[j]->isActive )
-						{
-							continue;
-						}
-						//find the other bolt
-						BOLT* OtherBolt = NULL;
-						if( Bolt->AttachedGirders[j]->Bolt1 == Bolt )
-						{
-							OtherBolt = Bolt->AttachedGirders[j]->Bolt2;
-						}
-						else
-						{
-							OtherBolt = Bolt->AttachedGirders[j]->Bolt1;
-						}
-						float currentLength = GetBoltDistance( Bolt, OtherBolt );
-						float NormalizedX = (  OtherBolt->x - Bolt->x )/ currentLength;
-						float NormalizedY = (  OtherBolt->y - Bolt->y )/ currentLength;
-						float ForceMagnitude = Bolt->forceX*NormalizedX + Bolt->forceY*NormalizedY;
-						if( fabs(ForceMagnitude) > fabs(BestDotProduct) )
-						{
-							BestGirderIndex = j;
-							BestNormalizedX = NormalizedX;
-							BestNormalizedY = NormalizedY;
-						}
-					}
-					//now lets offload as much off of force onto this girder as we can	
-					if( abs(Bolt->forceX*BestNormalizedX) > abs(Bolt->forceY*BestNormalizedY) )
-					{
-						ForceDispersed = Bolt->forceX;
-					}
-					else
-					{
-						ForceDispersed = Bolt->forceY;
-					}
-					float DisplacementX = BestNormalizedX * ForceDispersed / 11;
-					float DisplacementY = BestNormalizedY * ForceDispersed / 11;
-					if( DisplacementX != DisplacementX )
-					{
-						DisplacementX = 0;
-					}
-					if( DisplacementY != DisplacementY )
-					{
-						DisplacementY = 0;
-					}
-					Bolt->forceX -= BestNormalizedX * ForceDispersed;
-					Bolt->forceY -= BestNormalizedY * ForceDispersed;
-					Bolt->x +=DisplacementX;
-					Bolt->y +=DisplacementY;
-					TotalDisplacementX +=DisplacementX;
-					TotalDisplacementY +=DisplacementY;
-					//now see how much force is now in the system with this new displacement
-					for(int j = 0; j < Bolt->AttachedGirders.size(); j++ )
-					{
-						if( !Bolt->AttachedGirders[j]->isActive )
-						{
-							continue;
-						}
-						//find the other bolt
-						BOLT* OtherBolt = NULL;
-						if( Bolt->AttachedGirders[j]->Bolt1 == Bolt )
-						{
-							OtherBolt = Bolt->AttachedGirders[j]->Bolt2;
-						}
-						else
-						{
-							OtherBolt = Bolt->AttachedGirders[j]->Bolt1;
-						}
-
-						float currentLength = GetBoltDistance( OtherBolt, Bolt );
-						float stress = Bolt->AttachedGirders[j]->GetStressForce( currentLength );
-						Bolt->AttachedGirders[j]->CurrentStress = stress;
-
-						float NormalizedX = ( OtherBolt->x - Bolt->x )/ currentLength;
-						float NormalizedY = ( OtherBolt->y - Bolt->y )/ currentLength;
-						float forceX = stress * NormalizedX;
-						float forceY = stress * NormalizedY;
-						Bolt->forceX+=forceX;
-						Bolt->forceY+=forceY;
-					}
-					Iterations++;
-					NetForce = Bolt->forceX*Bolt->forceX + Bolt->forceY*Bolt->forceY;
-				}while(Iterations < 20 && fabs(NetForce) > 9 );
-				if( NetForce > 9)
-				{
-					//things went to shit, so lets try to average it out
-					Bolt->x = StartingX + TotalDisplacementX/Iterations;
-					Bolt->y = StartingY + TotalDisplacementY/Iterations;
-				}
-				
-				fprintf(stderr, "Bolt %d\tIterations: %d\tNet Force: %f\n",i, Iterations, NetForce);
-				//now that we're final, set it on the girders
+				float newX = 0.0f;
+				float newY = 0.0f;
 				for(int j = 0; j < Bolt->AttachedGirders.size(); j++ )
 				{
 					if( !Bolt->AttachedGirders[j]->isActive )
@@ -352,25 +164,19 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 					{
 						OtherBolt = Bolt->AttachedGirders[j]->Bolt1;
 					}
-
-					float currentLength = GetBoltDistance( OtherBolt, Bolt );
-					float stress = Bolt->AttachedGirders[j]->GetStressForce( currentLength );
-					Bolt->AttachedGirders[j]->CurrentStress = stress;
-					//fprintf(stderr, "Girder %d: Stress: %f\n",Bolt->AttachedGirders[j]->Index, stress);
-					if( fabs( Bolt->AttachedGirders[j]->CurrentStress ) > fabs( Bolt->AttachedGirders[j]->MaxStress ) )
-					{
-						Bolt->AttachedGirders[j]->MaxStress = Bolt->AttachedGirders[j]->CurrentStress;
-					}
-
-					float NormalizedX = ( OtherBolt->x - Bolt->x )/ currentLength;
-					float NormalizedY = ( OtherBolt->y - Bolt->y )/ currentLength;
-					float forceX = stress * NormalizedX;
-					float forceY = stress * NormalizedY;
-					Bolt->forceX+=forceX;
-					Bolt->forceY+=forceY;
+					newX += OtherBolt->x + (Bolt->startX - OtherBolt->startX);
+					newY += OtherBolt->y + (Bolt->startY - OtherBolt->startY);
 				}
+				newX += Bolt->forceX / Girder::GirderSpringContsant;
+				newY += Bolt->forceY / Girder::GirderSpringContsant;
+				newX /= Bolt->AttachedGirders.size();
+				newY /= Bolt->AttachedGirders.size();
+				Bolt->x = newX;
+				Bolt->y = newY;
+
+				Bolt->VelocityX = newX - StartingX;
+				Bolt->VelocityY = newY - StartingY;
 			}
-		//*/	
 		}
 	}
 
@@ -727,7 +533,7 @@ void LEVEL::Draw()
 		glPopMatrix();
 
 		//now draw the force diagrams
-		if( IsSimulating() )// !IsPaused() )
+		if (IsSimulating() && Bolt->AttachedGirders.size() == 1 )// !IsPaused() )
 		{
 			glLoadIdentity();
 			glPushMatrix();
@@ -735,7 +541,7 @@ void LEVEL::Draw()
 			glColor3f( 1.0f ,1.0f ,1.0f ); 
 			glBegin(GL_LINES);
 			glVertex3f( Bolt->GetDrawX(), Bolt->GetDrawY(), 0.0f);
-			//fprintf(stderr, "Force X: %f \t Force Y: %f \n", Bolt->forceX, Bolt->forceY );
+			fprintf(stderr, "Force X: %f \t Force Y: %f \n", Bolt->forceX, Bolt->forceY );
 			glVertex3f( Bolt->GetDrawX()+Bolt->forceX, Bolt->GetDrawY()+Bolt->forceY, 0.0f);
 			glEnd();  
 		}

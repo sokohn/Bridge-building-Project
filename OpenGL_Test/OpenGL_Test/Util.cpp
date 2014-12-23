@@ -4,7 +4,7 @@
 extern LEVEL Level;
 
 bool Simulating = false;
-bool Paused = true;
+bool Paused = false;
 
 bool ShowStress()
 {

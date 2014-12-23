@@ -24,9 +24,11 @@ public:
 
 	static const int GirderWeight = 100;
 	static float GirderStrength;
+	static float GirderSpringContsant;
 
 	Girder();
 
 	void GetDrawColor( Color* color );
 	float GetStressForce( float currentLength );
+	float getCurrentLength();
 };
