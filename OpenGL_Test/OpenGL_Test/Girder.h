@@ -22,7 +22,7 @@ public:
 	bool isActive;
 	int Index;
 
-	static const int GirderWeight = 100;
+	static const int GirderWeight = 50;
 	static float GirderStrength;
 	static float GirderSpringContsant;
 

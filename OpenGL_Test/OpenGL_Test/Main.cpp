@@ -37,7 +37,7 @@ void updateGame()
     glutPostRedisplay();
 	clock_t CurTime;
 	CurTime = clock();
-	Level.Update( minf( (0.1f*( (float)(CurTime - PrevTime) ) / CLOCKS_PER_SEC ),0.1) );
+	Level.Update(0.01f);//( minf( (0.1f*( (float)(CurTime - PrevTime) ) / CLOCKS_PER_SEC ),0.1) );
 	PrevTime=CurTime;
 }
 

@@ -3,8 +3,8 @@
 #include <math.h>
 #include "Util.h"
 
-float Girder::GirderStrength = 100.0f;
-float Girder::GirderSpringContsant = 50.0f;
+float Girder::GirderStrength = 1500.0f;
+float Girder::GirderSpringContsant = 500.0f;
 
 void Girder::GetDrawColor( Color* color )
 {
@@ -21,7 +21,7 @@ void Girder::GetDrawColor( Color* color )
 			float UsedStressor = 0;
 			if( IsSimulating() )
 			{
-				UsedStressor = MaxStress;
+				UsedStressor = CurrentStress;
 			}
 			else
 			{
