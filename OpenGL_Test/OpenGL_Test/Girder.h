@@ -5,7 +5,7 @@ struct Color;
 
 //TODO: capitalize this
 //TODO: check if I spelled that right
-class Girder
+class GIRDER
 {
 public:
 	BOLT* Bolt1;
@@ -22,11 +22,11 @@ public:
 	bool isActive;
 	int Index;
 
-	static const int GirderWeight = 50;
+	static const int GirderWeight = 250;
 	static float GirderStrength;
 	static float GirderSpringContsant;
 
-	Girder();
+	GIRDER();
 
 	void GetDrawColor( Color* color );
 	float GetStressForce( float currentLength );

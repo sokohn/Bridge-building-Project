@@ -14,23 +14,30 @@
 
 extern MOUSE Mouse;
 
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
 LEVEL::LEVEL()
 {
-	Girders = new std::vector<Girder*>();
+	Girders = new std::vector<GIRDER*>();
 	Bolts = new std::vector<BOLT*>();
 	Land = new LAND(-2000, 4000, 480, 0 );
 
-	Land->AddPoint(520,240);
-	Land->AddPoint(1400,240);
+	Land->AddPoint(700,240);
+	Land->AddPoint(1220,240);
 
-	AddBolt(480,480, true);
-	AddBolt(1440,480, true);
+	AddBolt(640,480, true);
+	AddBolt(1280,480, true);
+	AddBolt(960, 240, true);
 
 	RoadLevel = 480;
 
 	MaxMoney = 20000;
 	CurrentlySpentMoney = 0;
 }
+
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
 
 void LEVEL::Update(float DeltaTime)
 {
@@ -59,15 +66,21 @@ void LEVEL::Update(float DeltaTime)
 	}
 }
 
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
 float GetBoltDistance( BOLT* b1, BOLT* b2 )
 {
     return sqrt( pow( b1->x - b2->x, 2 ) + pow( b1->y - b2->y, 2 ) );
 }
 
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
 void LEVEL::SimulatePhysics( float DeltaTime )
 {
 	 // damped out the force a bit
-	const float damping = (1.0 - DeltaTime);
+	const float damping = (1.0 - 1.0*DeltaTime);
 	for( int i = 0; i < Bolts->size(); i++ )
 	{
 		BOLT* Bolt = (*Bolts)[i];
@@ -82,10 +95,10 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 	// apply gravity to bolts
 	//todo: add in truck weight, via clever algorithm
 	  
-	float weight = -1.0f*Girder::GirderWeight;
+	float weight = -1.0f*GIRDER::GirderWeight;
 	for( int i = 0; i < Girders->size(); i++ )
 	{
-		Girder* girder = (*Girders)[i];
+		GIRDER* girder = (*Girders)[i];
 		if( girder->isActive )
 		{
 			if( girder->Bolt1->CanMove() )
@@ -106,9 +119,9 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 			{
 				girder->MaxStress = girder->CurrentStress;
 			}
-			if (fabs(girder->CurrentStress) > Girder::GirderStrength)
+			if (fabs(girder->CurrentStress) > GIRDER::GirderStrength)
 			{
-				//girder->isActive = false;
+				girder->isActive = false;
 			}
 		}
 	}
@@ -148,8 +161,6 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 				//fprintf(stderr, "theta: %f\n", theta);
 			}
 		}
-		//Bolt->forceX += Bolt->VelocityX / Girder::GirderWeight;
-		//Bolt->forceY += Bolt->VelocityY / Girder::GirderWeight;
 	}
 
 	//move move the bolts
@@ -158,10 +169,6 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 		BOLT* Bolt = (*Bolts)[i];
 		if(Bolt->CanMove() )
 		{
-			//fprintf(stderr, "Loc X: %f\tLoc Y: %f\n",Bolt->x, Bolt->y );
-
-			//instead, lets try to treat this movement as springs
-			//*
 			float NetForce = 0;
 			if(Bolt->GetNumActiveGirders() > 0 )
 			{
@@ -169,36 +176,7 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 				float StartingY = Bolt->y;
 				float newX = 0.0f;
 				float newY = 0.0f;
-				Girder* LastActiveGirder = NULL;
-				/*for(int j = 0; j < Bolt->AttachedGirders.size(); j++ )
-				{
-					if( !Bolt->AttachedGirders[j]->isActive )
-					{
-						continue;
-					}
-					LastActiveGirder = Bolt->AttachedGirders[j];
-					//find the other bolt
-					BOLT* OtherBolt = NULL;
-					if( Bolt->AttachedGirders[j]->Bolt1 == Bolt )
-					{
-						OtherBolt = Bolt->AttachedGirders[j]->Bolt2;
-					}
-					else
-					{
-						OtherBolt = Bolt->AttachedGirders[j]->Bolt1;
-					}
-					newX += OtherBolt->x + (Bolt->startX - OtherBolt->startX);
-					newY += OtherBolt->y + (Bolt->startY - OtherBolt->startY);
-				}
-				newX += Bolt->forceX / Girder::GirderSpringContsant;
-				//newX += Bolt->VelocityX * 0.58;
-				newY += Bolt->forceY / Girder::GirderSpringContsant;
-				//newY += Bolt->VelocityY * 0.58;
-				newX /= Bolt->AttachedGirders.size();
-				newY /= Bolt->AttachedGirders.size();
-				Bolt->x = newX;
-				Bolt->y = newY;
-				*/
+				GIRDER* LastActiveGirder = NULL;
 				Bolt->VelocityX += Bolt->forceX * DeltaTime;
 				Bolt->VelocityY += Bolt->forceY * DeltaTime;
 				Bolt->x += Bolt->VelocityX* DeltaTime;
@@ -206,233 +184,10 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 			}
 		}
 	}
-
 }
 
-static bool Started =false;
-//this physics system is based off of the one from the west point bridge design and contest
-void LEVEL::SimulatePhyscis2( float DeltaTime )
-{
-	if( !Started )
-	{
-		Started = true;
-	}
-	else
-	{
-		//return;
-	}
-    int nEquations = 2 * Bolts->size();
-		
-   float* length = (float*) calloc(Girders->size() , sizeof(float) );
-   float* cosX = (float*) calloc(Girders->size() , sizeof(float) );
-   float* cosY = (float*) calloc(Girders->size() , sizeof(float) );
-	
-
-   for( int i = 0; i < Bolts->size(); i++ )
-	{
-		BOLT* Bolt = (*Bolts)[i];
-		Bolt->forceX =0;
-		Bolt->forceY =0;
-	}
-
-    for (int i = 0; i < Girders->size(); i++) 
-	{
-		float dx = (*Girders)[i]->Bolt2->x - (*Girders)[i]->Bolt1->x;
-        float dy = (*Girders)[i]->Bolt2->y - (*Girders)[i]->Bolt1->y;
-        length[i] = sqrt( dx*dx + dy*dy );
-        cosX[i] = dx / length[i];
-        cosY[i] = dy / length[i];
-
-		if ( !(*Girders)[i]->isActive ) 
-		{
-            continue;
-        }
-        float deadLoad = DeltaTime;
-		(*Girders)[i]->Bolt1->forceY -= deadLoad;
-		(*Girders)[i]->Bolt2->forceY -= deadLoad;
-    }
-		
-	//add train load here to the joints of the girders it is touching
-		
-	//determine the strength of each connection
-	//it goes through each girder 
-   // double stiffness[][] = new double[nEquations][nEquations];
-	float* stiffness = (float*) calloc( nEquations*nEquations, sizeof(float) );
-    for (int i = 0; i < Girders->size(); i++) 
-	{
-		Girder* girder = (*Girders)[i];
-        float e = 1;
-		if ( !girder->isActive ) 
-		{
-            e = 0;
-        }
-        double aEOverL = 100.0f;
-        double xx = aEOverL * pow(cosX[i],2);
-        double yy = aEOverL * pow(cosY[i],2);
-        double xy = aEOverL * cosX[i] * cosY[i];
-		int j1 = girder->Bolt1->Index;
-        int j2 = girder->Bolt2->Index;
-        int j1x = 2 * j1;
-        int j1y = 2 * j1 + 1;
-        int j2x = 2 * j2;
-        int j2y = 2 * j2 + 1;
-        stiffness[j1x * nEquations + j1x] += xx;
-        stiffness[j1x * nEquations + j1y] += xy;
-        stiffness[j1x * nEquations + j2x] -= xx;
-        stiffness[j1x * nEquations + j2y] -= xy;
-        stiffness[j1y * nEquations + j1x] += xy;
-        stiffness[j1y * nEquations + j1y] += yy;
-        stiffness[j1y * nEquations + j2x] -= xy;
-        stiffness[j1y * nEquations + j2y] -= yy;
-        stiffness[j2x * nEquations + j1x] -= xx;
-        stiffness[j2x * nEquations + j1y] -= xy;
-        stiffness[j2x * nEquations + j2x] += xx;
-        stiffness[j2x * nEquations + j2y] += xy;
-        stiffness[j2y * nEquations + j1x] -= xy;
-        stiffness[j2y * nEquations + j1y] -= yy;
-        stiffness[j2y * nEquations + j2x] += xy;
-        stiffness[j2y * nEquations + j2y] += yy;
-    }
-	
-	//goes through the anchors, sets the stiffness to 0 (except for maximizing the self connection) and sets the load to 0 in the fixed direction
-	for (int i = 0; i < Bolts->size(); i++ ) 
-	{
-		if ( !(*Bolts)[i]->CanMove() )
-		{
-			int ix = 2 * i;
-			int iy = 2 * i +1;
-			for (int ie = 0; ie < nEquations; ie++) 
-			{
-				stiffness[ix * nEquations + ie] =0;
-				stiffness[ie * nEquations + ix] = 0;
-				stiffness[iy * nEquations + ie] = 0;
-				stiffness[ie * nEquations + iy] = 0;
-			}
-			stiffness[ix * nEquations + ix] = 1;
-			stiffness[iy * nEquations + iy] = 1;
-			(*Bolts)[i]->forceX = 0.0f;
-			(*Bolts)[i]->forceY = 0.0f;
-		}
-	}
-		
-	//we're doing something here, not quite sure what
-    for (int ie = 0; ie < nEquations; ie++) 
-	{
-        double pivot = stiffness[ie * nEquations + ie];
-		if(pivot == 0 )
-		{
-			continue;
-		}
-        double pivr = 1.0 / pivot;
-        for (int k = 0; k < nEquations; k++)
-		{
-            stiffness[ie * nEquations + k] /= pivot;
-        }
-        for (int k = 0; k < nEquations; k++)
-		{
-            if (k != ie) 
-			{
-                pivot = stiffness[k * nEquations + ie];
-                for (int j = 0; j < nEquations; j++) 
-				{
-                    stiffness[k * nEquations + j] -= stiffness[ie * nEquations + j] * pivot;
-                }
-                stiffness[k * nEquations + ie] = -pivot * pivr;
-            }
-        }
-        stiffness[ie * nEquations + ie] = pivr;
-
-		if( ie%2 == 0 )
-		{
-			//fprintf(stderr, "Bolt %d:  \tstiffness X: %f ", ie/2, pivr);
-		}
-		else
-		{
-			//fprintf(stderr, "stiffness Y: %f\n", pivr);
-		}
-    }
-
-	float* jointDisplacementX = (float*) calloc(Bolts->size(), sizeof(float));
-	float* jointDisplacementY = (float*) calloc(Bolts->size(), sizeof(float));
-
-	for(int i = 0; i < Bolts->size(); i++ )
-	{
-		float tempX = 0;
-		float tempY = 0;
-		for(int j = 0; j < Bolts->size(); j++ )
-		{
-			tempX += stiffness[2*i* nEquations + j*2] * (*Bolts)[j]->forceX;
-			tempY += stiffness[( ( 2*i ) + 1 ) * nEquations + ( j*2 ) +1 ] * (*Bolts)[j]->forceY;
-		}
-		jointDisplacementX[i] = tempX;
-		jointDisplacementY[i] = tempY;
-		
-		fprintf(stderr, "Bolts %d:\tMovement X: %f\tMovement Y: %f\n",i,tempX,tempY);
-	}
-	for(int i =0; i <  Bolts->size() -2; i++ )
-	{
-		float Diff1x = jointDisplacementX[i + 1] - jointDisplacementX[i];
-		float Diff2x = jointDisplacementX[i + 2] - jointDisplacementX[i +1];
-		float Diff1y = jointDisplacementY[i + 1] - jointDisplacementY[i];
-		float Diff2y = jointDisplacementY[i + 2] - jointDisplacementY[i +1];
-
-		fprintf(stderr, "Diff %d:\tMovement X: %f\tMovement Y: %f\n", i, Diff2x - Diff1x,  Diff2y - Diff1y );
-	}
-
-    // Compute member forces.
-    /*for (int i = 0; i < Girders->size(); i++) 
-	{
-        Girder* girder = (*Girders)[i];
-        float e = 1;
-		if ( !girder->isActive ) 
-		{
-            e = 0;
-        }
-        float aEOverL = 100.0f;
-		int ija = girder->Bolt1->Index;
-        int ijb = girder->Bolt2->Index;
-		girder->CurrentStress = aEOverL* ( ( cosX[i] * ( jointDisplacementX[ijb] - jointDisplacementX[ija] ) ) + (cosY[i] * (jointDisplacementY[ijb] - jointDisplacementY[ija] ) ) );
-		if( fabs(girder->CurrentStress) > fabs(girder->MaxStress) )
-		{
-			girder->MaxStress = girder->CurrentStress;
-		}
-    }*/
-
-	for(int i = 0; i < Bolts->size(); i++ )
-	{
-		(*Bolts)[i]->x = (*Bolts)[i]->x + jointDisplacementX[i];
-		(*Bolts)[i]->y = (*Bolts)[i]->y + jointDisplacementY[i];
-	}
-
-	for(int j = 0; j < Girders->size(); j++ )
-	{
-		Girder* girder = (*Girders)[j];
-		if( !girder->isActive )
-		{
-			continue;
-		}
-		//find the other bolt
-
-		float currentLength = GetBoltDistance( girder->Bolt1, girder->Bolt2 );
-		float stress = girder->GetStressForce( currentLength );
-		girder->CurrentStress = stress;
-		if( fabs(girder->CurrentStress) > fabs(girder->MaxStress) )
-		{
-			girder->MaxStress = girder->CurrentStress;
-		}
-		if( fabs(girder->CurrentStress) > Girder::GirderStrength )
-		{
-			girder->isActive = false;
-		}
-	}
-
-	delete length;
-	delete cosX;
-	delete cosY;
-	delete stiffness;
-	delete jointDisplacementX;
-	delete jointDisplacementY;
-}
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
 
 void drawGrid()
 {
@@ -449,7 +204,7 @@ void drawGrid()
 		{
 			//major line
 			glLineWidth(0.25f);			
-			glColor3f( 0.55f,0.555f, 0.55f );
+			glColor3f( 0.55f,0.555f, 0.35f );
 		}
 		else if( i % 2 == 0 )
 		{
@@ -481,13 +236,13 @@ void drawGrid()
 		{
 			//major line
 			glLineWidth(0.25f);			
-			glColor3f( 0.75f,0.75f, 0.75f );
+			glColor3f(0.55f, 0.555f, 0.35f);
 		}
 		else if( i % 2 == 0 )
 		{
 			//medium line
 			glLineWidth(0.25f);			
-			glColor3f( 0.5f,0.5f, 0.5f );
+			glColor3f(0.35f, 0.35f, 0.35f);
 		}
 		else
 		{
@@ -506,10 +261,16 @@ void drawGrid()
 	glPopMatrix();
 }
 
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
 void LEVEL::drawLand()
 {
 	Land->DrawLand();
 }
+
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
 
 void LEVEL::DrawRoad()
 {
@@ -524,6 +285,9 @@ void LEVEL::DrawRoad()
 	glEnd();  
 	glPopMatrix();
 }
+
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
 
 void LEVEL::Draw()
 {
@@ -581,7 +345,7 @@ void LEVEL::Draw()
 	{
 		glLoadIdentity();
 		glPushMatrix();
-		Girder* girder = (*Girders)[i];
+		GIRDER* girder = (*Girders)[i];
 
 		//only draw the second end point and the connection if it is finished
 		if( girder->isActive )
@@ -600,7 +364,10 @@ void LEVEL::Draw()
 	}
 }
 
-bool LEVEL::CheckIfRoad( Girder* girder )
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
+bool LEVEL::CheckIfRoad( GIRDER* girder )
 {
 	if( girder->Bolt1->y == girder->Bolt2->y )
 	{
@@ -609,7 +376,10 @@ bool LEVEL::CheckIfRoad( Girder* girder )
 	return false;
 }
 
-Girder* LEVEL::AddGirder( BOLT* Bolt1, float x, float y )
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
+GIRDER* LEVEL::AddGirder( BOLT* Bolt1, float x, float y )
 {
 	if(IsSimulating())
 	{
@@ -630,12 +400,13 @@ Girder* LEVEL::AddGirder( BOLT* Bolt1, float x, float y )
 		}
 	}
 
-	Girder* girder = new Girder();
+	GIRDER* girder = new GIRDER();
 	girder->Bolt1 = Bolt1;
 	girder->Bolt2 = AddBolt(BoltLocX,BoltLocY, false);
 	girder->isFinished = true;
 	Girders->push_back(girder);
 	girder->Index = Girders->size() - 1;
+	CurrentlySpentMoney += 100;
 	
 	//now add it to the its bolts
 	girder->Bolt1->AttachedGirders.push_back(girder);
@@ -647,7 +418,10 @@ Girder* LEVEL::AddGirder( BOLT* Bolt1, float x, float y )
 	return girder;
 }
 
-Girder* LEVEL::AddGirder( BOLT* Bolt1, BOLT* Bolt2 )
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
+GIRDER* LEVEL::AddGirder( BOLT* Bolt1, BOLT* Bolt2 )
 {
 	if(IsSimulating())
 	{
@@ -656,7 +430,7 @@ Girder* LEVEL::AddGirder( BOLT* Bolt1, BOLT* Bolt2 )
 	//add in code to check for is these two bolts are already linked
 	for( int i = 0; i < Girders->size(); i++ )
 	{
-		Girder* girder = (*Girders)[i];
+		GIRDER* girder = (*Girders)[i];
 		if( ( girder->Bolt1 == Bolt1 && girder->Bolt2 == Bolt2 ) || ( girder->Bolt1 == Bolt2 && girder->Bolt2 == Bolt1 ) )
 		{
 			fprintf(stderr, "This girder already exists\n");
@@ -665,12 +439,13 @@ Girder* LEVEL::AddGirder( BOLT* Bolt1, BOLT* Bolt2 )
 	}
 
 	//ok, we're good
-	Girder* girder = new Girder();
+	GIRDER* girder = new GIRDER();
 	girder->Bolt1 = Bolt1;
 	girder->Bolt2 = Bolt2;
 	girder->isFinished = true;
 	Girders->push_back(girder);
 	girder->Index = Girders->size() - 1;
+	CurrentlySpentMoney += 100;
 	
 	//now add it to the its bolts
 	girder->Bolt1->AttachedGirders.push_back(girder);
@@ -682,10 +457,8 @@ Girder* LEVEL::AddGirder( BOLT* Bolt1, BOLT* Bolt2 )
 	return girder;
 }
 
-bool LEVEL::RemoveGirder()
-{
-	return true;
-}
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
 
 BOLT* LEVEL::AddBolt(float x, float y, bool IsAnchor)
 {
@@ -716,6 +489,44 @@ BOLT* LEVEL::AddBolt(float x, float y, bool IsAnchor)
 	return Bolt;
 }
 
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
+bool LEVEL::RemoveGirder(GIRDER* Girder)
+{
+	for (std::vector<GIRDER*>::iterator it = Girder->Bolt1->AttachedGirders.begin(); it != Girder->Bolt1->AttachedGirders.end(); ++it)
+	{
+		if ((*it) == Girder)
+		{
+			Girder->Bolt1->AttachedGirders.erase(it);
+			break;
+		}
+	}
+
+	for (std::vector<GIRDER*>::iterator it = Girder->Bolt2->AttachedGirders.begin(); it != Girder->Bolt2->AttachedGirders.end(); ++it)
+	{
+		if ((*it) == Girder)
+		{
+			Girder->Bolt2->AttachedGirders.erase(it);
+			break;
+		}
+	}
+
+	for (std::vector<GIRDER*>::iterator it = Girders->begin(); it != Girders->end(); ++it)
+	{
+		if ((*it) == Girder)
+		{
+			Girders->erase(it);
+			CurrentlySpentMoney -= 100;
+			break;
+		}
+	}
+	return true;
+}
+
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
 bool LEVEL::RemoveBolt( BOLT* bolt )
 {
 	if(IsSimulating())
@@ -726,11 +537,12 @@ bool LEVEL::RemoveBolt( BOLT* bolt )
 	for(int i = 0; i < bolt->AttachedGirders.size(); i++)
 	{
 		//now go through Girders and look for the this girder, then remove it
-		for( std::vector<Girder*>::iterator it = Girders->begin() ; it != Girders->end(); ++it )
+		for( std::vector<GIRDER*>::iterator it = Girders->begin() ; it != Girders->end(); ++it )
 		{
 			if( (*it) == bolt->AttachedGirders[i] )
 			{
 				Girders->erase(it);
+				CurrentlySpentMoney -= 100;
 				break;
 			}
 		}
@@ -746,7 +558,7 @@ bool LEVEL::RemoveBolt( BOLT* bolt )
 			OtherBolt = bolt->AttachedGirders[i]->Bolt1;
 		}
 
-		for( std::vector<Girder*>::iterator it = OtherBolt->AttachedGirders.begin() ; it != OtherBolt->AttachedGirders.end(); ++it )
+		for( std::vector<GIRDER*>::iterator it = OtherBolt->AttachedGirders.begin() ; it != OtherBolt->AttachedGirders.end(); ++it )
 		{
 			if( (*it) == bolt->AttachedGirders[i] )
 			{
@@ -771,6 +583,60 @@ bool LEVEL::RemoveBolt( BOLT* bolt )
 	return true;
 }
 
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
+BOLT* LEVEL::FindBolt(float x, float y)
+{
+	for (int i = 0; i < Bolts->size(); i++)
+	{
+		if ((*Bolts)[i]->x == x && (*Bolts)[i]->y == y)
+		{
+			return (*Bolts)[i];
+		}
+	}
+	return NULL;
+}
+
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
+GIRDER* LEVEL::FindGirder(float x1, float y1, float x2, float y2)
+{
+	for (int i = 0; i < Bolts->size(); i++)
+	{
+		BOLT* Bolt = (*Bolts)[i];
+		if (Bolt->x == x1 && Bolt->y == y1)
+		{
+			for (int j = 0; j < Bolt->AttachedGirders.size(); j++)
+			{
+				if (Bolt->AttachedGirders[j]->getCurrentLength() != 0)
+				{
+					BOLT* OtherBolt = NULL;
+					if (Bolt->AttachedGirders[j]->Bolt1 == Bolt)
+					{
+						OtherBolt = Bolt->AttachedGirders[j]->Bolt2;
+					}
+					else
+					{
+						OtherBolt = Bolt->AttachedGirders[j]->Bolt1;
+					}
+
+					if (OtherBolt->x == x2 && OtherBolt->y == y2)
+					{
+						return Bolt->AttachedGirders[j];
+					}
+				}
+			}
+			return NULL;
+		}
+	}
+	return NULL;
+}
+
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
 void LEVEL::StartSimulation()
 {
 	for(int i =0; i< Bolts->size(); i++ )
@@ -794,6 +660,9 @@ void LEVEL::StartSimulation()
 	}
 }
 
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
 void LEVEL::EndSimulation()
 {
 	for( int i = 0; i < Girders->size(); i++ )
@@ -810,6 +679,9 @@ void LEVEL::EndSimulation()
 
 	}
 }
+
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
 
 void LEVEL::DeserializeLevel(char* FileName)
 {
@@ -912,6 +784,9 @@ void LEVEL::DeserializeLevel(char* FileName)
 	Deserializer.close();
 }
 
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
 void LEVEL::SerializeLevel(char* FileName)
 {
 	if(IsSimulating() )
@@ -949,7 +824,7 @@ void LEVEL::SerializeLevel(char* FileName)
 	//and now the girders
 	for(int i =0; i < Girders->size(); i++ )
 	{
-		Girder* girder = (*Girders)[i];
+		GIRDER* girder = (*Girders)[i];
 		
 		Serializer<<"GIRDER:";
 		Serializer<<std::setprecision(0);

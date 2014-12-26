@@ -3,10 +3,13 @@
 #include <math.h>
 #include "Util.h"
 
-float Girder::GirderStrength = 1500.0f;
-float Girder::GirderSpringContsant = 500.0f;
+float GIRDER::GirderStrength = 1250.0f;
+float GIRDER::GirderSpringContsant = 500.0f;
 
-void Girder::GetDrawColor( Color* color )
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
+void GIRDER::GetDrawColor( Color* color )
 {
 	if( Highlighted )
 	{
@@ -47,7 +50,10 @@ void Girder::GetDrawColor( Color* color )
 	}
 }
 
-Girder::Girder()
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
+GIRDER::GIRDER()
 {
 	Bolt1 = NULL;
 	Bolt2 = NULL;
@@ -58,14 +64,20 @@ Girder::Girder()
 	MaxStress = 0;
 }
 
-float Girder::GetStressForce( float currentLength )
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
+float GIRDER::GetStressForce( float currentLength )
 {
     // f = k x
     float dx = currentLength - StartingLength;
 	return GirderSpringContsant * dx;
 }
 
-float Girder::getCurrentLength()
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
+float GIRDER::getCurrentLength()
 {
 	return sqrt(pow(Bolt2->x - Bolt1->x, 2) + pow(Bolt2->y - Bolt1->y, 2));
 

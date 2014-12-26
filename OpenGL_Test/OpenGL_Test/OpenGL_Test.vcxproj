@@ -72,6 +72,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Action.cpp" />
     <ClCompile Include="Bolt.cpp" />
     <ClCompile Include="Girder.cpp" />
     <ClCompile Include="Land.cpp" />
@@ -80,6 +81,7 @@
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Action.h" />
     <ClInclude Include="Bolt.h" />
     <ClInclude Include="Girder.h" />
     <ClInclude Include="Land.h" />

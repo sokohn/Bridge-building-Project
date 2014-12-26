@@ -2,7 +2,8 @@
 #pragma once
 
 const int GridSpacing = 20;
-const int MaxGirderLength = 169;
+const int MaxGirderLength = 172;
+const int MaxGirderLengthDirectional = 160;
 extern float ZoomLevel;
 
 struct Color
@@ -31,6 +32,12 @@ struct SCREEN
 {
 	float width;
 	float height;
+};
+
+struct LOCATION
+{
+	float x;
+	float y;
 };
 
 extern SCREEN Screen;
