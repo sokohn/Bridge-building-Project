@@ -2,9 +2,11 @@
 #include <GL\freeglut.h>
 #include <iostream>
 #include <math.h>
+#include <stack>
 #include <vector>
 #include <time.h>
 
+#include "Action.h"
 #include "Bolt.h"
 #include "Girder.h"
 #include "Level.h"
@@ -23,9 +25,15 @@ float CameraY;
 
 
 //used to show where the next girder would be located
-static Girder DrawGirder;
+static GIRDER DrawGirder;
 static BOLT DrawBolt(0,0);
 static bool isDrawingGirder = false;
+
+stack<ACTION*> UndoStack;
+stack<ACTION*> RedoStack;
+
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
 
 void changeViewport(int w, int h)
 {
@@ -34,15 +42,20 @@ void changeViewport(int w, int h)
 	Screen.width = (float) w;
 }
 
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
 void updateGame()
 {
     glutPostRedisplay();
 	clock_t CurTime;
 	CurTime = clock();
-	Level.Update( minf( (0.1f*( (float)(CurTime - PrevTime) ) / CLOCKS_PER_SEC ),0.1) );
+	Level.Update( minf( (( (float)(CurTime - PrevTime) ) / CLOCKS_PER_SEC ),0.1) );
 	PrevTime=CurTime;
 }
 
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
 
 void render()
 {
@@ -93,11 +106,11 @@ void render()
     glutSwapBuffers();
 }
 
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
 void MouseMoveHandler( int x, int y)
 {
-	//float NormMouseLocX = ( ( 2*x - Screen.width )/Screen.width ) * Screen.width;
-	//float NormMouseLocY = ( -1.0f*( ( 2*y - Screen.height )/Screen.height ) )* Screen.height;
-	
 	Mouse.x = ((x - Screen.width/2.0) / ZoomLevel)+CameraX;
 	Mouse.y = -1.0f*((y - Screen.height/2.0) / ZoomLevel)+CameraY;
 
@@ -111,7 +124,29 @@ void MouseMoveHandler( int x, int y)
 		{
 			float theta = atan2((DrawGirder.Bolt1->y - Mouse.y),(DrawGirder.Bolt1->x - Mouse.x ));
 			Mouse.x = DrawGirder.Bolt1->x - cos(theta)*MaxGirderLength;
+			if (MaxGirderLengthDirectional < fabs(cos(theta)*MaxGirderLength))
+			{
+				if (cos(theta) > 0)
+				{
+					Mouse.x = DrawGirder.Bolt1->x - MaxGirderLengthDirectional;
+				}
+				else
+				{
+					Mouse.x = DrawGirder.Bolt1->x + MaxGirderLengthDirectional;
+				}
+			}
 			Mouse.y = DrawGirder.Bolt1->y - sin(theta)*MaxGirderLength;
+			if (MaxGirderLengthDirectional < fabs(sin(theta)*MaxGirderLength))
+			{
+				if (sin(theta) > 0)
+				{
+					Mouse.y = DrawGirder.Bolt1->y - MaxGirderLengthDirectional;
+				}
+				else
+				{
+					Mouse.y = DrawGirder.Bolt1->y + MaxGirderLengthDirectional;
+				}
+			}
 		}
 
 		for(int i =0; i< Level.Bolts->size(); i++ )
@@ -135,6 +170,9 @@ void MouseMoveHandler( int x, int y)
 		DrawBolt.y = RoundToNearestGridMarker( Mouse.y );
 	}
 }
+
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
 
 void MouseClickHandler(int button, int state, int x, int y)
 {
@@ -199,7 +237,14 @@ void MouseClickHandler(int button, int state, int x, int y)
 					return;
 				}
 
-				Level.RemoveBolt(HitBolt);
+				REMOVE_BOLT* RemoveBolt = new REMOVE_BOLT(HitBolt->x, HitBolt->y);
+
+				UndoStack.push(RemoveBolt);
+				RemoveBolt->Perform(&Level);
+				while (!RedoStack.empty())
+				{
+					RedoStack.pop();
+				}
 
 				//now finally delete the bolt
 				delete HitBolt;
@@ -211,8 +256,7 @@ void MouseClickHandler(int button, int state, int x, int y)
 
 	if(button == GLUT_LEFT_BUTTON  && state == GLUT_UP )
 	{
-		Girder* girder = NULL;
-		fprintf(stderr, "Zoom: %f\tMouse Loc X: %f  Y: %f\n",ZoomLevel,Mouse.x, Mouse.y );
+		GIRDER* girder = NULL;
 		//check to see if we need to add a new girder, or if we are finishing the current one
 
 		if( !isDrawingGirder )
@@ -236,29 +280,34 @@ void MouseClickHandler(int button, int state, int x, int y)
 			if( HitBolt == NULL )
 			{
 				//round the bolt's location to land on a grid spot
-				girder = Level.AddGirder(DrawGirder.Bolt1, DrawBolt.x, DrawBolt.y );
-				if( girder == NULL )
+				ADD_GIRDER* AddGirder = new ADD_GIRDER(DrawGirder.Bolt1->x, DrawGirder.Bolt1->y, DrawBolt.x, DrawBolt.y);
+				UndoStack.push(AddGirder);
+				AddGirder->Perform(&Level);
+				DrawGirder.Bolt1 = Level.FindBolt(DrawBolt.x, DrawBolt.y);
+				while (!RedoStack.empty())
 				{
-					//must have failed
-					return;
+					RedoStack.pop();
 				}
 			}
 			else
 			{
 				//eventually put in a check here to make sure there isn't already a girder that connects these two bolts
 				girder = Level.AddGirder(DrawGirder.Bolt1, HitBolt);
-				if( girder == NULL )
+				ADD_GIRDER* AddGirder = new ADD_GIRDER(DrawGirder.Bolt1->x, DrawGirder.Bolt1->y, HitBolt->x, HitBolt->y);
+				UndoStack.push(AddGirder);
+				AddGirder->Perform(&Level);
+				DrawGirder.Bolt1 = HitBolt;
+				while (!RedoStack.empty())
 				{
-					//must have failed
-					return;
+					RedoStack.pop();
 				}
 			}
-
-			//now set the most recently used bolt as the starting point for the next girder
-			DrawGirder.Bolt1 = girder->Bolt2;
 		}
 	}
 }
+
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
 
 void HandleKeyboard(unsigned char key, int x, int y) 
 {
@@ -318,7 +367,28 @@ void HandleKeyboard(unsigned char key, int x, int y)
 			CameraX = 2000;
 		}
 	}
+	else if (key == 'u' || key == 'U')
+	{
+		if (UndoStack.size() > 0)
+		{
+			UndoStack.top()->Undo(&Level);
+			RedoStack.push(UndoStack.top());
+			UndoStack.pop();
+		}
+	}
+	else if (key == 'r' || key == 'R')
+	{
+		if (RedoStack.size() > 0)
+		{
+			RedoStack.top()->Perform(&Level);
+			UndoStack.push(RedoStack.top());
+			RedoStack.pop();
+		}
+	}
 }
+
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
 
 int main( int argc, char** argv)
 {

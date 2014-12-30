@@ -3,9 +3,13 @@
 #include <math.h>
 #include "Util.h"
 
-float Girder::GirderStrength = 50.0f;
+float GIRDER::GirderStrength = 1250.0f;
+float GIRDER::GirderSpringContsant = 500.0f;
 
-void Girder::GetDrawColor( Color* color )
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
+void GIRDER::GetDrawColor( Color* color )
 {
 	if( Highlighted )
 	{
@@ -20,15 +24,16 @@ void Girder::GetDrawColor( Color* color )
 			float UsedStressor = 0;
 			if( IsSimulating() )
 			{
-				UsedStressor = MaxStress;
+				UsedStressor = CurrentStress;
 			}
 			else
 			{
 				UsedStressor = MaxStress;
 			}
 			color->red = maxf(-1.0f*UsedStressor/GirderStrength,0);
-			color->green = maxf( ( GirderStrength - UsedStressor*4 ) / GirderStrength, 0);
+			color->green = maxf((GirderStrength - fabs(UsedStressor) ) / GirderStrength, 0 );
 			color->blue = maxf(UsedStressor/GirderStrength,0);
+
 		}
 		else if( isRoad )
 		{
@@ -45,7 +50,10 @@ void Girder::GetDrawColor( Color* color )
 	}
 }
 
-Girder::Girder()
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
+GIRDER::GIRDER()
 {
 	Bolt1 = NULL;
 	Bolt2 = NULL;
@@ -56,9 +64,21 @@ Girder::Girder()
 	MaxStress = 0;
 }
 
-float Girder::GetStressForce( float currentLength )
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
+float GIRDER::GetStressForce( float currentLength )
 {
     // f = k x
     float dx = currentLength - StartingLength;
-    return 10 * dx;
+	return GirderSpringContsant * dx;
+}
+
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
+float GIRDER::getCurrentLength()
+{
+	return sqrt(pow(Bolt2->x - Bolt1->x, 2) + pow(Bolt2->y - Bolt1->y, 2));
+
 }

@@ -3,7 +3,7 @@
 
 
 struct Color;
-class Girder;
+class GIRDER;
 
 class BOLT
 {
@@ -25,7 +25,7 @@ public:
 	int Index;
 
 	bool Highlighted;
-	std::vector<Girder*> AttachedGirders;
+	std::vector<GIRDER*> AttachedGirders;
 
 	BOLT(float _x, float _y);
 	~BOLT();

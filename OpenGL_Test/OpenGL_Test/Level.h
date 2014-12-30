@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 
-class Girder;
+class GIRDER;
 class BOLT;
 class LAND;
 
@@ -10,7 +10,7 @@ class LEVEL
 public:
 	LEVEL();
 
-	std::vector<Girder*>* Girders;
+	std::vector<GIRDER*>* Girders;
 	std::vector<BOLT*>* Bolts;
 	LAND* Land;
 
@@ -22,10 +22,14 @@ public:
 	void Draw();
 	void drawLand();
 
-	Girder* AddGirder( BOLT* Bolt1, float x, float y );
-	Girder* AddGirder( BOLT* Bolt1, BOLT* Bolt2 );
-	bool RemoveGirder();
+	GIRDER* AddGirder( BOLT* Bolt1, float x, float y );
+	GIRDER* AddGirder( BOLT* Bolt1, BOLT* Bolt2 );
+	bool RemoveGirder( GIRDER* Girder );
 	bool RemoveBolt( BOLT* bolt );
+
+
+	BOLT* FindBolt(float x, float y);
+	GIRDER* FindGirder(float x1, float y1, float x2, float y2);
 
 	void StartSimulation();
 	void EndSimulation();
@@ -39,8 +43,12 @@ private:
 	int CurrentlySpentMoney;
 	float RoadLevel;
 
-	bool CheckIfRoad( Girder* girder );
+	bool CheckIfRoad( GIRDER* girder );
 	void DrawRoad();
 	BOLT* AddBolt(float x, float y, bool IsAnchor);
 
+	friend class ACTION;
+	friend class ADD_GIRDER;
+	friend class REMOVE_GIRDER;
+	friend class REMOVE_BOLT;
 };
