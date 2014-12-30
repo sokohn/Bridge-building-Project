@@ -12,6 +12,11 @@ struct Color
 	float blue;
 	float alpha;
 
+	Color()
+	{
+		Reset();
+	}
+
 	void Reset()
 	{
 		red = 0.0f;

@@ -18,6 +18,8 @@ SCREEN Screen;
 LEVEL Level;
 float ZoomLevel;
 clock_t PrevTime;
+float CameraX;
+float CameraY;
 
 
 //used to show where the next girder would be located
@@ -49,7 +51,7 @@ void render()
 
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
-	glOrtho( 0, Screen.width / ZoomLevel, 0, Screen.height / ZoomLevel, -1, 1 );
+	glOrtho( CameraX+(Screen.width / ZoomLevel )/-2.0 , CameraX+(Screen.width / ZoomLevel )/2.0, CameraY+(Screen.height / ZoomLevel )/-2.0, CameraY+(Screen.height / ZoomLevel )/2.0, -1, 1 );
 
     glMatrixMode( GL_MODELVIEW );
     glLoadIdentity();
@@ -96,8 +98,8 @@ void MouseMoveHandler( int x, int y)
 	//float NormMouseLocX = ( ( 2*x - Screen.width )/Screen.width ) * Screen.width;
 	//float NormMouseLocY = ( -1.0f*( ( 2*y - Screen.height )/Screen.height ) )* Screen.height;
 	
-	Mouse.x = x / ZoomLevel;
-	Mouse.y = (Screen.height-y) / ZoomLevel;
+	Mouse.x = ((x - Screen.width/2.0) / ZoomLevel)+CameraX;
+	Mouse.y = -1.0f*((y - Screen.height/2.0) / ZoomLevel)+CameraY;
 
 	if( isDrawingGirder )
 	{
@@ -136,13 +138,31 @@ void MouseMoveHandler( int x, int y)
 
 void MouseClickHandler(int button, int state, int x, int y)
 {
+	//mouse scroll for zooming
+	if ( state == GLUT_UP && button == 3 )
+	{
+		ZoomLevel *= 1.1;
+		if(ZoomLevel > 1)
+		{
+			ZoomLevel = 1;
+		}
+	}
+	else if( state == GLUT_UP && button == 4 )
+	{
+		ZoomLevel /= 1.1;
+		if(ZoomLevel < 0.25 )
+		{
+			ZoomLevel = 0.25;
+		}
+	}
+
 	if(IsSimulating())
 	{
 		//TODO: Once I get some menu UI in, make sure they can still function
 		return;
 	}
-	float NormMouseLocX = x/ ZoomLevel;
-	float NormMouseLocY = (Screen.height-y) / ZoomLevel;
+	float NormMouseLocX = ((x - Screen.width/2.0) / ZoomLevel)+CameraX;
+	float NormMouseLocY = -1.0f*((y - Screen.height/2.0) / ZoomLevel)+CameraY;
 	BOLT* HitBolt = NULL;
 
 	//iterate through all of the bolts and see if we are within the collision radius of one of them
@@ -192,7 +212,7 @@ void MouseClickHandler(int button, int state, int x, int y)
 	if(button == GLUT_LEFT_BUTTON  && state == GLUT_UP )
 	{
 		Girder* girder = NULL;
-
+		fprintf(stderr, "Zoom: %f\tMouse Loc X: %f  Y: %f\n",ZoomLevel,Mouse.x, Mouse.y );
 		//check to see if we need to add a new girder, or if we are finishing the current one
 
 		if( !isDrawingGirder )
@@ -246,7 +266,7 @@ void HandleKeyboard(unsigned char key, int x, int y)
 	{
 		exit(0);
 	}
-	else if( key == 's' || key == 'S' )
+	else if( key == 't' || key == 'T' )
 	{
 		SetSimulating(!IsSimulating());
 		isDrawingGirder = false;
@@ -266,6 +286,38 @@ void HandleKeyboard(unsigned char key, int x, int y)
 	{
 		Level.DeserializeLevel("TestFile.txt");
 	}
+	else if( key == 'w' || key == 'W' )
+	{
+		CameraY+=10/ZoomLevel;
+		if(CameraY > 1000)
+		{
+			CameraY = 1000;
+		}
+	}
+	else if( key == 'a' || key == 'A' )
+	{
+		CameraX-=10/ZoomLevel;
+		if(CameraX < -2000)
+		{
+			CameraX = -2000;
+		}
+	}
+	else if( key == 's' || key == 'S' )
+	{
+		CameraY-=10/ZoomLevel;
+		if(CameraY <  -750 )
+		{
+			CameraY = -750;
+		}
+	}
+	else if( key == 'd' || key == 'D' )
+	{
+		CameraX+=10/ZoomLevel;
+		if(CameraX > 2000)
+		{
+			CameraX = 2000;
+		}
+	}
 }
 
 int main( int argc, char** argv)
@@ -276,6 +328,8 @@ int main( int argc, char** argv)
 	glutInitWindowSize( 1024, 768 );
 	Screen.width = 1024;
 	Screen.height = 768;
+	CameraX = 0;
+	CameraY = 0;
 
 	glutCreateWindow( "Bridge clone" );
 	glEnable(GL_CLIP_DISTANCE5);

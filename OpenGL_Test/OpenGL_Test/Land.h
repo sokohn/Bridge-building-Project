@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include "Util.h"
 
 class LAND
 {
@@ -20,15 +21,11 @@ public:
 
 	struct LAND_TRIANGLE
 	{
-		LAND_TRIANGLE(LAND_POINT* _p1, LAND_POINT* _p2, LAND_POINT* _p3 )
-		{
-			P1 = _p1;
-			P2 = _p2;
-			P3 = _p3;
-		}
+		LAND_TRIANGLE(LAND_POINT* _p1, LAND_POINT* _p2, LAND_POINT* _p3 );
 		LAND_POINT* P1;
 		LAND_POINT* P2;
 		LAND_POINT* P3;
+		Color C;
 	};
 
 	LAND(float x1, float x2, float y1, float y2);

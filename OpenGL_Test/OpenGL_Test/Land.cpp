@@ -3,6 +3,7 @@
 #include <assert.h> 
 #include "Land.h"
 #include <iostream>
+#include <stdlib.h> 
 
 class EarNode
 {
@@ -39,6 +40,16 @@ bool LAND::LAND_POINT::Equals(LAND_POINT* Point)
 	return Point->x == x && Point->y == y;
 }
 
+LAND::LAND_TRIANGLE::LAND_TRIANGLE(LAND_POINT* _p1, LAND_POINT* _p2, LAND_POINT* _p3 )
+{
+	P1 = _p1;
+	P2 = _p2;
+	P3 = _p3;
+	C.red = (rand()%256)/256.0;
+	C.green = (rand()%256)/256.0;
+	C.blue = (rand()%256)/256.0;
+}
+
 LAND::LAND(float x1, float x2, float y1, float y2)
 {
 	Land = new std::vector<LAND_POINT*>();
@@ -59,7 +70,9 @@ void LAND::DrawLand()
 	{
 		glPushMatrix();
 		glBegin(GL_TRIANGLES);
-		glColor3f( 0.2f, 0.1f, 0.0f );
+		glLineWidth(10.0f);	
+		//glBegin(GL_LINE_LOOP);
+		glColor3f( ((*LandTriangles)[i])->C.red, ((*LandTriangles)[i])->C.green ,((*LandTriangles)[i])->C.blue );
 		glVertex3f( ((*LandTriangles)[i])->P1->x, ((*LandTriangles)[i])->P1->y, 0.0f );
 		glVertex3f( ((*LandTriangles)[i])->P2->x, ((*LandTriangles)[i])->P2->y, 0.0f );
 		glVertex3f( ((*LandTriangles)[i])->P3->x, ((*LandTriangles)[i])->P3->y, 0.0f );
@@ -68,10 +81,11 @@ void LAND::DrawLand()
 	}
 	glPopMatrix();
 
-	if( Land->size() > 2 )
+	/*if( Land->size() > 2 )
 	{
 		glLoadIdentity();
 		glPushMatrix();
+		glLineWidth(1.0f);	
 		glBegin(GL_LINE_LOOP);
 		glColor3f( 1.0f, 1.0f, 1.0f );  
 		for(int i =0; i<Land->size(); i++ )
@@ -80,7 +94,7 @@ void LAND::DrawLand()
 		}
 		glEnd();
 		glPopMatrix();
-	}
+	}*/
 }
 
 

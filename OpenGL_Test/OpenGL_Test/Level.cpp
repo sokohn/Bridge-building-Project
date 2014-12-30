@@ -13,20 +13,22 @@
 #include "Util.h"
 
 extern MOUSE Mouse;
+extern float CameraX;
+extern float CameraY;
 
 LEVEL::LEVEL()
 {
 	Girders = new std::vector<Girder*>();
 	Bolts = new std::vector<BOLT*>();
-	Land = new LAND(-2000, 4000, 480, 0 );
+	Land = new LAND(-10000, 10000, 0, -4000 );
 
-	Land->AddPoint(520,240);
-	Land->AddPoint(920,240);
+	Land->AddPoint(-200,-240);
+	Land->AddPoint(200,-240);
 
-	AddBolt(480,480, true);
-	AddBolt(960,480, true);
+	AddBolt(-320,0, true);
+	AddBolt(320,0, true);
 
-	RoadLevel = 480;
+	RoadLevel = 0;
 
 	MaxMoney = 20000;
 	CurrentlySpentMoney = 0;
@@ -37,7 +39,7 @@ void LEVEL::Update(float DeltaTime)
 	//deal with the delta time later when we get to actually simulating physics
 	if( IsSimulating() && !IsPaused() )
 	{
-		//SimulatePhysics(DeltaTime);
+		SimulatePhysics(DeltaTime);
 	}
 
 	//iterate through all of the bolts and see if we are within the collision radius of one of them
@@ -99,6 +101,7 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 		}
 	}
 
+	/*
 	//go through the bolts and apply forces to their neighbors
 	for( int z =0; z < 1; z++ )
 	{
@@ -152,6 +155,7 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 			}
 			//fprintf(stderr, "Bolt %d\tContribution X: %f Contribution X: %f\n",i,TotalContributionX, TotalContributionY );
 			//TotalContribution = sqrt(TotalContribution);
+			
 
 			for(int j = 0; j < Bolt->AttachedGirders.size(); j++ )
 			{
@@ -202,6 +206,8 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 			}
 		}
 	}
+
+	*/
 	//run through all of the bolts and print out the forces acting on them
 	for( int i = 0; i < Bolts->size(); i++ )
 	{
@@ -326,7 +332,7 @@ void LEVEL::SimulatePhysics( float DeltaTime )
 					}
 					Iterations++;
 					NetForce = Bolt->forceX*Bolt->forceX + Bolt->forceY*Bolt->forceY;
-				}while(Iterations < 20 && fabs(NetForce) > 9 );
+				}while(Iterations < 100 && fabs(NetForce) > 9 );
 				if( NetForce > 9)
 				{
 					//things went to shit, so lets try to average it out
@@ -603,7 +609,7 @@ void LEVEL::SimulatePhyscis2( float DeltaTime )
 
 void drawGrid()
 {
-	int NumLines = ( Screen.width/ ZoomLevel )/GridSpacing;
+	int NumLines = 2*( Screen.width/ ZoomLevel )/GridSpacing;
 	//vertical lines
 	glLoadIdentity();
 	glPushMatrix();
@@ -612,60 +618,64 @@ void drawGrid()
 	{
 		glLoadIdentity();
 		glPushMatrix();
-		if( i % 8 == 0 )
+		int GridLoc = (CameraX- (int)CameraX%GridSpacing )+(int) ((Screen.width / ZoomLevel )/-2.0-fmodf( (Screen.width / ZoomLevel )/-2.0, (float)GridSpacing )) + i*GridSpacing;
+		GridLoc = GridLoc - GridLoc%GridSpacing;
+		if( GridLoc % 160 == 0 )
 		{
 			//major line
 			glLineWidth(0.25f);			
 			glColor3f( 0.55f,0.555f, 0.55f );
 		}
-		else if( i % 2 == 0 )
+		else if( GridLoc % 40 == 0 )
 		{
 			//medium line
-			glLineWidth(0.25f);			
+			glLineWidth(0.15f);			
 			glColor3f( 0.35f,0.35f, 0.35f );
 		}
 		else
 		{
 			//minor lines
-			glLineWidth(0.25f);			
+			glLineWidth(0.15f);			
 			glColor3f( 0.0f,0.0f, 0.0f );
 		}
 		
 		glBegin(GL_LINES);
-		glVertex3f( i*GridSpacing , 0 , 0.0f);
-		glVertex3f( i*GridSpacing, Screen.height / ZoomLevel, 0.0f);
-		glEnd();  
+		glVertex3f( GridLoc , CameraY+(Screen.height / ZoomLevel )/-2.0 , 0.0f);
+		glVertex3f( GridLoc, CameraY+(Screen.height / ZoomLevel )/2.0, 0.0f);
+		glEnd();
 		
 		glPopMatrix();
 	}
 
-	NumLines = ( Screen.height/ ZoomLevel )/GridSpacing;
+	NumLines = 2*( Screen.height/ ZoomLevel )/GridSpacing;
 	for(int i = 0; i< NumLines; i++ )
 	{
 		glLoadIdentity();
 		glPushMatrix();
-		if( i % 8 == 0 )
+		int GridLoc = (CameraY- (int)CameraY%GridSpacing )+(int) ((Screen.height / ZoomLevel )/-2.0-fmodf( (Screen.height / ZoomLevel )/-2.0, (float)GridSpacing )) + i*GridSpacing;
+		GridLoc = GridLoc - GridLoc%GridSpacing;
+		if( GridLoc % 160 == 0 )
 		{
 			//major line
 			glLineWidth(0.25f);			
-			glColor3f( 0.75f,0.75f, 0.75f );
+			glColor3f( 0.55f,0.555f, 0.55f );
 		}
-		else if( i % 2 == 0 )
+		else if( GridLoc % 40 == 0 )
 		{
 			//medium line
-			glLineWidth(0.25f);			
-			glColor3f( 0.5f,0.5f, 0.5f );
+			glLineWidth(0.15f);			
+			glColor3f( 0.35f,0.35f, 0.35f );
 		}
 		else
 		{
 			//minor lines
-			glLineWidth(0.25f);			
+			glLineWidth(0.15f);			
 			glColor3f( 0.0f,0.0f, 0.0f );
 		}
 		
 		glBegin(GL_LINES);
-		glVertex3f( 0.0f , i*GridSpacing, 0.0f);
-		glVertex3f( Screen.width/ ZoomLevel, i*GridSpacing, 0.0f);
+		glVertex3f( CameraX-Screen.width/ ZoomLevel , GridLoc, 0.0f);
+		glVertex3f( CameraX+Screen.width/ ZoomLevel, GridLoc, 0.0f);
 		glEnd();  
 		
 		glPopMatrix();
@@ -686,8 +696,8 @@ void LEVEL::DrawRoad()
 	glLineWidth(0.25f);			
 	glColor3f( 0.75f,0.75f, 0.0f );
 	glBegin(GL_LINES);
-	glVertex3f( 0.0f , RoadLevel, 0.0f);
-	glVertex3f( Screen.width/ ZoomLevel, RoadLevel, 0.0f);
+	glVertex3f( CameraX-Screen.width/ ZoomLevel, RoadLevel, 0.0f);
+	glVertex3f( CameraX+Screen.width/ ZoomLevel, RoadLevel, 0.0f);
 	glEnd();  
 	glPopMatrix();
 }
