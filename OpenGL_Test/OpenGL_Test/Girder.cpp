@@ -3,7 +3,7 @@
 #include <math.h>
 #include "Util.h"
 
-float GIRDER::GirderStrength = 1250.0f;
+float GIRDER::GirderStrength = 2500.0f;
 float GIRDER::GirderSpringContsant = 500.0f;
 
 //////////////////////////////////////////////////////////////////////////

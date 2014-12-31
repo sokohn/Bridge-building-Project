@@ -23,14 +23,14 @@ LEVEL::LEVEL()
 {
 	Girders = new std::vector<GIRDER*>();
 	Bolts = new std::vector<BOLT*>();
-	Land = new LAND(-10000, 10000, 0, -4000 );
+	Land = new LAND(-2000, 2000, 480, -2000 );
 
 	Land->AddPoint(700,240);
 	Land->AddPoint(1220,240);
 
 	AddBolt(640,480, true);
 	AddBolt(1280,480, true);
-	AddBolt(960, 240, true);
+	AddBolt(960, 320, true);
 
 	RoadLevel = 0;
 

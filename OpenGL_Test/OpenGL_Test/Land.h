@@ -2,29 +2,31 @@
 #include <vector>
 #include "Util.h"
 
+class Vector2D
+{
+public:
+	Vector2D(float _x, float _y)
+	{
+		x = _x;
+		y = _y;
+	}
+	float x;
+	float y;
+
+	bool Equals(Vector2D* Point);
+	Vector2D& operator-(const Vector2D& rhs);
+};
+
 class LAND
 {
 public:
-	class LAND_POINT
-	{
-	public:
-		LAND_POINT(float _x, float _y)
-		{
-			x = _x;
-			y = _y;
-		}
-		float x;
-		float y;
-
-		bool Equals(LAND_POINT* Point);
-	};
 
 	struct LAND_TRIANGLE
 	{
-		LAND_TRIANGLE(LAND_POINT* _p1, LAND_POINT* _p2, LAND_POINT* _p3 );
-		LAND_POINT* P1;
-		LAND_POINT* P2;
-		LAND_POINT* P3;
+		LAND_TRIANGLE(Vector2D* _p1, Vector2D* _p2, Vector2D* _p3 );
+		Vector2D* P1;
+		Vector2D* P2;
+		Vector2D* P3;
 		Color C;
 	};
 
@@ -41,7 +43,7 @@ public:
 
 private:
 
-	std::vector<LAND_POINT*>* Land;
+	std::vector<Vector2D*>* Land;
 	std::vector<LAND_TRIANGLE*>* LandTriangles;
 
 	void ConstructTriangles();

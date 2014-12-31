@@ -55,3 +55,6 @@ Temporary Items
 *.log
 *.sdf
 *.sdf
+OpenGL_Test/OpenGL_Test.sdf
+*.sdf
+*.opensdf

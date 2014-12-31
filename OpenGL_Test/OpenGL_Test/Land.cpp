@@ -8,13 +8,13 @@
 class EarNode
 {
 public:
-	EarNode( LAND::LAND_POINT* _Point)
+	EarNode( Vector2D* _Point)
 	{
 		Point = _Point;
 		Prev = NULL;
 		Next = NULL;
 	}
-	LAND::LAND_POINT* Point;
+	Vector2D* Point;
 	EarNode* Prev;
 	EarNode* Next;
 };
@@ -31,16 +31,24 @@ public:
 	//doubly linked circular list
 	EarNode* Head;
 	int NumNodes;
-	void AddNode(LAND::LAND_POINT* Point);
+	void AddNode(Vector2D* Point);
 	void RemoveNode(EarNode* Node);
 };
 
-bool LAND::LAND_POINT::Equals(LAND_POINT* Point)
+bool Vector2D::Equals(Vector2D* Point)
 {
 	return Point->x == x && Point->y == y;
 }
 
-LAND::LAND_TRIANGLE::LAND_TRIANGLE(LAND_POINT* _p1, LAND_POINT* _p2, LAND_POINT* _p3 )
+Vector2D& Vector2D::operator - (const Vector2D& rhs)
+{
+	Vector2D temp(this->x, this->y);
+	temp.x -= rhs.x;
+	temp.y -= rhs.y;
+	return temp;
+}
+
+LAND::LAND_TRIANGLE::LAND_TRIANGLE(Vector2D* _p1, Vector2D* _p2, Vector2D* _p3 )
 {
 	P1 = _p1;
 	P2 = _p2;
@@ -52,7 +60,7 @@ LAND::LAND_TRIANGLE::LAND_TRIANGLE(LAND_POINT* _p1, LAND_POINT* _p2, LAND_POINT*
 
 LAND::LAND(float x1, float x2, float y1, float y2)
 {
-	Land = new std::vector<LAND_POINT*>();
+	Land = new std::vector<Vector2D*>();
 	LandTriangles = new std::vector<LAND_TRIANGLE*>();
 
 	AddPoint(x1,y1);
@@ -81,7 +89,7 @@ void LAND::DrawLand()
 	}
 	glPopMatrix();
 
-	/*if( Land->size() > 2 )
+	if( Land->size() > 2 )
 	{
 		glLoadIdentity();
 		glPushMatrix();
@@ -94,7 +102,7 @@ void LAND::DrawLand()
 		}
 		glEnd();
 		glPopMatrix();
-	}*/
+	}
 }
 
 
@@ -103,7 +111,7 @@ bool LAND::AddPoint( float x, float y )
 	if( Land->size() < 4 )
 	{
 		//these are the anchor points, just add them
-		Land->push_back(new LAND_POINT(x,y));
+		Land->push_back(new Vector2D(x,y));
 	}
 	else
 	{
@@ -116,11 +124,11 @@ bool LAND::AddPoint( float x, float y )
 		}
 
 		bool AddedPoint = false;
-		for (std::vector<LAND_POINT*>::iterator it=Land->begin(); it<Land->end()-2; it++)
+		for (std::vector<Vector2D*>::iterator it=Land->begin(); it<Land->end()-2; it++)
 		{
 			if( x < (*it)->x )
 			{
-				Land->insert(it, new LAND_POINT(x,y) );
+				Land->insert(it, new Vector2D(x,y) );
 				AddedPoint = true;
 				break;
 			}
@@ -136,7 +144,7 @@ bool LAND::AddPoint( float x, float y )
 				//if these points share the same x, we want to sort by least Y travel from the preceding point
 				if( fabs( (*(it-1))->y - (*it)->y ) > fabs( (*(it-1))->y - y ) )
 				{
-					Land->insert(it, new LAND_POINT(x,y) );
+					Land->insert(it, new Vector2D(x,y) );
 					AddedPoint = true;
 					break;
 				}*/
@@ -160,22 +168,26 @@ bool LAND::AddPoint( float x, float y )
 	}
 }
 
-bool IsPointInTriangle(LAND::LAND_POINT* Point, LAND::LAND_POINT* t0, LAND::LAND_POINT* t1, LAND::LAND_POINT* t2 )
+float Cross2D(Vector2D P1, Vector2D P2)
 {
-	float Area = 1.0f/2.0f*(-t1->y*t2->x + t0->y*(-t1->x + t2->x) + t0->x*(t1->y - t2->y) + t1->x*t2->y);
+	return (P1.y * P2.x) - (P1.x * P2.y);
+}
 
-	float s = 1/(2*Area)*(t0->y*t2->x - t0->x*t2->y + (t2->y - t0->y)*Point->x + (t0->x - t2->x)*Point->y);
-	float t = 1/(2*Area)*(t0->x*t1->y - t0->y*t1->x + (t0->y - t1->y)*Point->x + (t1->x - t0->x)*Point->y);
-	if( s < 0 || s > 1 )
+bool IsPointInTriangle(Vector2D* Point, Vector2D* t0, Vector2D* t1, Vector2D* t2 )
+{
+	if (Cross2D(*Point - *t0, *t1 - *t0) < 0.0)
 	{
 		return false;
 	}
-	if( t < 0 || t > 1 )
+	if (Cross2D(*Point - *t1, *t2 - *t1) < 0.0)
 	{
 		return false;
 	}
-
-	return s + t <= 1;
+	if (Cross2D(*Point - *t2, *t0 - *t2) < 0.0)
+	{
+		return false;
+	}
+	return true;
 }
 
 void LAND::ConstructTriangles()
@@ -199,13 +211,10 @@ void LAND::ConstructTriangles()
 			//now go through all of the nodes and see if they are inside the triangle, if none are, then we add the triangle and prune the middle node
 			for(int i =0; i < Land->size(); i++)
 			{
-				if( (*Land)[i] != Node->Point && (*Land)[i] != Node->Prev->Point && (*Land)[i] != Node->Next->Point )
+				if( IsPointInTriangle( (*Land)[i], Node->Prev->Point, Node->Point, Node->Next->Point) )
 				{
-					if( IsPointInTriangle( (*Land)[i], Node->Prev->Point, Node->Point, Node->Next->Point) )
-					{
-						FoundEar = false;
-						break;
-					}
+					FoundEar = false;
+					break;
 				}
 			}
 
@@ -244,7 +253,7 @@ EarList::~EarList()
 	}
 }
 
-void EarList::AddNode(LAND::LAND_POINT* Point)
+void EarList::AddNode(Vector2D* Point)
 {
 	EarNode* Node = new EarNode( Point );
 	if( Head == NULL )
