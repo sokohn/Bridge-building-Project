@@ -66,6 +66,11 @@ void LEVEL::Update(float DeltaTime)
 			}
 		}
 	}
+
+	for (int i = 0; i < Girders->size(); i++)
+	{
+		(*Girders)[i]->Highlighted = false;
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -632,6 +637,56 @@ GIRDER* LEVEL::FindGirder(float x1, float y1, float x2, float y2)
 			return NULL;
 		}
 	}
+	return NULL;
+}
+
+GIRDER* LEVEL::FindGirder(float x, float y)
+{
+	//find the nearest girder to specified location, assuming any are within range
+
+	Vector2D MouseLoc(x, y);
+	GIRDER* ClosestGirder = NULL;
+	float BestDistance = 10000000;
+	for (int i = 0; i < Girders->size(); i++)
+	{
+		float CurrDistance = 0;
+		GIRDER* Temp = (*Girders)[i];
+		Vector2D End1(Temp->Bolt1->x, Temp->Bolt1->y);
+		Vector2D End2(Temp->Bolt2->x, Temp->Bolt2->y);
+
+		Vector2D ab = End2 - End1;
+		Vector2D ac = MouseLoc - End1;
+		Vector2D bc = MouseLoc - End2;
+		float e = ac.Dot(ab);
+		if (e <= 0)
+		{
+			CurrDistance = ac.Dot(ac);
+		}
+		else
+		{
+			float f = ab.Dot(ab);
+			if (e >= f)
+			{
+				CurrDistance = bc.Dot(bc);
+			}
+			else
+			{
+				CurrDistance = ac.Dot(ac) - (e *e / f);
+			}
+		}
+
+		if (CurrDistance < BestDistance)
+		{
+			ClosestGirder = Temp;
+			BestDistance = CurrDistance;
+		}
+	}
+
+	if (BestDistance <= 100)
+	{
+		return ClosestGirder;
+	}
+
 	return NULL;
 }
 

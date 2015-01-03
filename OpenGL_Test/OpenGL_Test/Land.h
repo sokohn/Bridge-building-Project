@@ -2,20 +2,6 @@
 #include <vector>
 #include "Util.h"
 
-class Vector2D
-{
-public:
-	Vector2D(float _x, float _y)
-	{
-		x = _x;
-		y = _y;
-	}
-	float x;
-	float y;
-
-	bool Equals(Vector2D* Point);
-	Vector2D& operator-(const Vector2D& rhs);
-};
 
 class LAND
 {

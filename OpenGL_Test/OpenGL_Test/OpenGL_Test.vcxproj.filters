@@ -1,60 +1,87 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
+    <Filter Include="UI">
+      <UniqueIdentifier>{d8f37192-3000-43eb-a802-3ced78e1cf71}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BridgeGame">
+      <UniqueIdentifier>{b179c6d1-dfa6-4539-8718-b5d008734d78}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BridgeGame\Source Files">
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
-    <Filter Include="Header Files">
+    <Filter Include="BridgeGame\Header Files">
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
-    <Filter Include="Resource Files">
+    <Filter Include="UI\Header Files">
+      <UniqueIdentifier>{eea4d07c-37b4-4825-a66a-56b8b04d1ea9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="UI\Source Files">
+      <UniqueIdentifier>{1f05c6ba-0b17-4414-8a8b-655fa4d82c06}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BridgeGame\Resource Files">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>BridgeGame\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Bolt.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>BridgeGame\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Girder.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>BridgeGame\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Util.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>BridgeGame\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Level.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>BridgeGame\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Land.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>BridgeGame\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Action.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>BridgeGame\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\Button.cpp">
+      <Filter>UI\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\Menu.cpp">
+      <Filter>UI\Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bolt.h">
-      <Filter>Header Files</Filter>
+      <Filter>BridgeGame\Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Util.h">
-      <Filter>Header Files</Filter>
+      <Filter>BridgeGame\Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Girder.h">
-      <Filter>Header Files</Filter>
+      <Filter>BridgeGame\Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Level.h">
-      <Filter>Header Files</Filter>
+      <Filter>BridgeGame\Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Land.h">
-      <Filter>Header Files</Filter>
+      <Filter>BridgeGame\Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Action.h">
-      <Filter>Header Files</Filter>
+      <Filter>BridgeGame\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\Button.h">
+      <Filter>UI\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\UI_Base.h">
+      <Filter>UI\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\Menu.h">
+      <Filter>UI\Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

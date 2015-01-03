@@ -12,6 +12,9 @@
 #include "Level.h"
 #include "Util.h"
 
+#include "UI\Button.h"
+#include "UI\Menu.h"
+
 using namespace std;
 
 
@@ -23,11 +26,16 @@ clock_t PrevTime;
 float CameraX;
 float CameraY;
 
+MENU Menu;
+
+MOUSE RawMouse;
+
 
 //used to show where the next girder would be located
-static GIRDER DrawGirder;
+//TODO: Figure out a better place to store this stuff so I don't need to extern it everywhere
+GIRDER DrawGirder;
 static BOLT DrawBolt(0,0);
-static bool isDrawingGirder = false;
+bool isDrawingGirder = false;
 
 stack<ACTION*> UndoStack;
 stack<ACTION*> RedoStack;
@@ -37,9 +45,10 @@ stack<ACTION*> RedoStack;
 
 void changeViewport(int w, int h)
 {
-	glViewport(0,0,w,h);
-	Screen.height = (float) h;
-	Screen.width = (float) w;
+	//glViewport(0,0,w,h);
+	//Screen.height = (float) h;
+	//Screen.width = (float) w;
+	glutReshapeWindow(Screen.width, Screen.height);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -51,6 +60,15 @@ void updateGame()
 	clock_t CurTime;
 	CurTime = clock();
 	Level.Update( minf( (( (float)(CurTime - PrevTime) ) / CLOCKS_PER_SEC ),0.1) );
+	if (!isDrawingGirder && !IsSimulating() )
+	{
+		GIRDER* Girder = Level.FindGirder(Mouse.x, Mouse.y);
+		if (Girder != NULL)
+		{
+			Girder->Highlighted = true;
+		}
+	}
+	Menu.Update();
 	PrevTime=CurTime;
 }
 
@@ -101,73 +119,86 @@ void render()
 		glPopMatrix();
 
 	}
+	Menu.Draw();
+
 
 	glPopMatrix();
     glutSwapBuffers();
 }
 
 //////////////////////////////////////////////////////////////////////////
+////////////////update the draw location for the new girder//////////////
 //////////////////////////////////////////////////////////////////////////
+
+void RepositionGirderCursor()
+{
+	Vector2D OrigMouse(Mouse.x, Mouse.y);
+	//firstly, reproject the vector if it is too long
+	int distance = (pow(DrawGirder.Bolt1->x - Mouse.x, 2.0f) + pow(DrawGirder.Bolt1->y - Mouse.y, 2.0f));
+	if (distance > MaxGirderLength * MaxGirderLength)
+	{
+		float theta = atan2((DrawGirder.Bolt1->y - Mouse.y), (DrawGirder.Bolt1->x - Mouse.x));
+		Mouse.x = DrawGirder.Bolt1->x - cos(theta)*MaxGirderLength;
+		if (MaxGirderLengthDirectional < fabs(cos(theta)*MaxGirderLength))
+		{
+			if (cos(theta) > 0)
+			{
+				Mouse.x = DrawGirder.Bolt1->x - MaxGirderLengthDirectional;
+			}
+			else
+			{
+				Mouse.x = DrawGirder.Bolt1->x + MaxGirderLengthDirectional;
+			}
+		}
+		Mouse.y = DrawGirder.Bolt1->y - sin(theta)*MaxGirderLength;
+		if (MaxGirderLengthDirectional < fabs(sin(theta)*MaxGirderLength))
+		{
+			if (sin(theta) > 0)
+			{
+				Mouse.y = DrawGirder.Bolt1->y - MaxGirderLengthDirectional;
+			}
+			else
+			{
+				Mouse.y = DrawGirder.Bolt1->y + MaxGirderLengthDirectional;
+			}
+		}
+	}
+
+	for (int i = 0; i< Level.Bolts->size(); i++)
+	{
+		BOLT* Bolt = (*Level.Bolts)[i];
+		if (Bolt != NULL)
+		{
+			float distance = (pow(Mouse.x - Bolt->x, 2.0f) + pow(Mouse.y - Bolt->y, 2.0f));
+			//fprintf(stderr, "distance: %f \n", distance);
+			if (distance <= BOLT::collisionRadius * BOLT::collisionRadius)
+			{
+				Bolt->Highlighted = true;
+				DrawBolt.x = Bolt->x;
+				DrawBolt.y = Bolt->y;
+				return;
+			}
+		}
+	}
+
+	DrawBolt.x = RoundToNearestGridMarker(Mouse.x);
+	DrawBolt.y = RoundToNearestGridMarker(Mouse.y);
+	Mouse.x = OrigMouse.x;
+	Mouse.y = OrigMouse.y;
+}
 
 void MouseMoveHandler( int x, int y)
 {
+	RawMouse.x = x;
+	RawMouse.y = y;
 	Mouse.x = ((x - Screen.width/2.0) / ZoomLevel)+CameraX;
 	Mouse.y = -1.0f*((y - Screen.height/2.0) / ZoomLevel)+CameraY;
 
+	//fprintf(stderr, "Mouse X: %f \t Mouse Y: %f \n", Mouse.x, Mouse.y);
+
 	if( isDrawingGirder )
 	{
-		//update the draw location for the new girder
-		
-		//firstly, reproject the vector if it is too long
-		int distance = ( pow( DrawGirder.Bolt1->x - Mouse.x,2.0f) + pow( DrawGirder.Bolt1->y - Mouse.y,2.0f) );
-		if( distance > MaxGirderLength * MaxGirderLength )
-		{
-			float theta = atan2((DrawGirder.Bolt1->y - Mouse.y),(DrawGirder.Bolt1->x - Mouse.x ));
-			Mouse.x = DrawGirder.Bolt1->x - cos(theta)*MaxGirderLength;
-			if (MaxGirderLengthDirectional < fabs(cos(theta)*MaxGirderLength))
-			{
-				if (cos(theta) > 0)
-				{
-					Mouse.x = DrawGirder.Bolt1->x - MaxGirderLengthDirectional;
-				}
-				else
-				{
-					Mouse.x = DrawGirder.Bolt1->x + MaxGirderLengthDirectional;
-				}
-			}
-			Mouse.y = DrawGirder.Bolt1->y - sin(theta)*MaxGirderLength;
-			if (MaxGirderLengthDirectional < fabs(sin(theta)*MaxGirderLength))
-			{
-				if (sin(theta) > 0)
-				{
-					Mouse.y = DrawGirder.Bolt1->y - MaxGirderLengthDirectional;
-				}
-				else
-				{
-					Mouse.y = DrawGirder.Bolt1->y + MaxGirderLengthDirectional;
-				}
-			}
-		}
-
-		for(int i =0; i< Level.Bolts->size(); i++ )
-		{
-			BOLT* Bolt = (*Level.Bolts)[i];
-			if( Bolt != NULL )
-			{
-				float distance = ( pow( Mouse.x - Bolt->x,2.0f) + pow( Mouse.y - Bolt->y,2.0f) );
-				//fprintf(stderr, "distance: %f \n", distance);
-				if( distance <= BOLT::collisionRadius * BOLT::collisionRadius )
-				{
-					Bolt->Highlighted = true;
-					DrawBolt.x = Bolt->x;
-					DrawBolt.y = Bolt->y;
-					return;
-				}
-			}
-		}
-
-		DrawBolt.x = RoundToNearestGridMarker( Mouse.x );
-		DrawBolt.y = RoundToNearestGridMarker( Mouse.y );
+		RepositionGirderCursor();
 	}
 }
 
@@ -184,6 +215,7 @@ void MouseClickHandler(int button, int state, int x, int y)
 		{
 			ZoomLevel = 1;
 		}
+		MouseMoveHandler(RawMouse.x, RawMouse.y);
 	}
 	else if( state == GLUT_UP && button == 4 )
 	{
@@ -192,6 +224,7 @@ void MouseClickHandler(int button, int state, int x, int y)
 		{
 			ZoomLevel = 0.25;
 		}
+		MouseMoveHandler(RawMouse.x, RawMouse.y);
 	}
 
 	if(IsSimulating())
@@ -251,6 +284,23 @@ void MouseClickHandler(int button, int state, int x, int y)
 				return;
 
 			}
+			else
+			{
+				//check if we want to remove a girder
+				GIRDER* Girder = Level.FindGirder(Mouse.x, Mouse.y);
+				if (Girder != NULL)
+				{
+					Girder->Highlighted = true;
+				}
+
+				REMOVE_GIRDER* RemoveGirder = new REMOVE_GIRDER(Girder->Bolt1->x, Girder->Bolt1->y, Girder->Bolt2->x, Girder->Bolt2->y);
+				UndoStack.push(RemoveGirder);
+				RemoveGirder->Perform(&Level);
+				while (!RedoStack.empty())
+				{
+					RedoStack.pop();
+				}
+			}
 		}
 	}
 
@@ -277,30 +327,13 @@ void MouseClickHandler(int button, int state, int x, int y)
 				return;
 			}
 
-			if( HitBolt == NULL )
+			//round the bolt's location to land on a grid spot
+			ADD_GIRDER* AddGirder = new ADD_GIRDER(DrawGirder.Bolt1->x, DrawGirder.Bolt1->y, DrawBolt.x, DrawBolt.y);
+			UndoStack.push(AddGirder);
+			AddGirder->Perform(&Level);
+			while (!RedoStack.empty())
 			{
-				//round the bolt's location to land on a grid spot
-				ADD_GIRDER* AddGirder = new ADD_GIRDER(DrawGirder.Bolt1->x, DrawGirder.Bolt1->y, DrawBolt.x, DrawBolt.y);
-				UndoStack.push(AddGirder);
-				AddGirder->Perform(&Level);
-				DrawGirder.Bolt1 = Level.FindBolt(DrawBolt.x, DrawBolt.y);
-				while (!RedoStack.empty())
-				{
-					RedoStack.pop();
-				}
-			}
-			else
-			{
-				//eventually put in a check here to make sure there isn't already a girder that connects these two bolts
-				girder = Level.AddGirder(DrawGirder.Bolt1, HitBolt);
-				ADD_GIRDER* AddGirder = new ADD_GIRDER(DrawGirder.Bolt1->x, DrawGirder.Bolt1->y, HitBolt->x, HitBolt->y);
-				UndoStack.push(AddGirder);
-				AddGirder->Perform(&Level);
-				DrawGirder.Bolt1 = HitBolt;
-				while (!RedoStack.empty())
-				{
-					RedoStack.pop();
-				}
+				RedoStack.pop();
 			}
 		}
 	}
@@ -342,6 +375,7 @@ void HandleKeyboard(unsigned char key, int x, int y)
 		{
 			CameraY = 1000;
 		}
+		MouseMoveHandler(RawMouse.x, RawMouse.y);
 	}
 	else if( key == 'a' || key == 'A' )
 	{
@@ -350,6 +384,7 @@ void HandleKeyboard(unsigned char key, int x, int y)
 		{
 			CameraX = -2000;
 		}
+		MouseMoveHandler(RawMouse.x, RawMouse.y);
 	}
 	else if( key == 's' || key == 'S' )
 	{
@@ -358,6 +393,7 @@ void HandleKeyboard(unsigned char key, int x, int y)
 		{
 			CameraY = -750;
 		}
+		MouseMoveHandler(RawMouse.x, RawMouse.y);
 	}
 	else if( key == 'd' || key == 'D' )
 	{
@@ -366,6 +402,7 @@ void HandleKeyboard(unsigned char key, int x, int y)
 		{
 			CameraX = 2000;
 		}
+		MouseMoveHandler(RawMouse.x, RawMouse.y);
 	}
 	else if (key == 'u' || key == 'U')
 	{
@@ -400,6 +437,7 @@ int main( int argc, char** argv)
 	Screen.height = 768;
 	CameraX = 0;
 	CameraY = 0;
+	Menu.AddUIElement( new BUTTON("Test Text", -425, 350, NULL));
 
 	glutCreateWindow( "Bridge clone" );
 	glEnable(GL_CLIP_DISTANCE5);

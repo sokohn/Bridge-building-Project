@@ -45,6 +45,30 @@ struct LOCATION
 	float y;
 };
 
+class Vector2D
+{
+public:
+	Vector2D()
+	{
+		x = 0;
+		y = 0;
+	}
+	Vector2D(float _x, float _y)
+	{
+		x = _x;
+		y = _y;
+	}
+	float x;
+	float y;
+
+	bool Equals(Vector2D* Point);
+	Vector2D& operator-(const Vector2D& rhs);
+	Vector2D& operator+(const Vector2D& rhs);
+
+	float Dot(const Vector2D& rhs);
+	float Cross(const Vector2D& rhs);
+};
+
 extern SCREEN Screen;
 
 bool ShowStress();
@@ -59,3 +83,5 @@ void SetPaused(bool Pause);
 
 float maxf(float x, float y);
 float minf(float x, float y);
+
+void RepositionGirderCursor();

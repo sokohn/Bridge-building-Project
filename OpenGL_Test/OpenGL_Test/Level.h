@@ -30,6 +30,7 @@ public:
 
 	BOLT* FindBolt(float x, float y);
 	GIRDER* FindGirder(float x1, float y1, float x2, float y2);
+	GIRDER* FindGirder(float x, float y);
 
 	void StartSimulation();
 	void EndSimulation();

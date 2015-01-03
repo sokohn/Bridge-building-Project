@@ -35,19 +35,6 @@ public:
 	void RemoveNode(EarNode* Node);
 };
 
-bool Vector2D::Equals(Vector2D* Point)
-{
-	return Point->x == x && Point->y == y;
-}
-
-Vector2D& Vector2D::operator - (const Vector2D& rhs)
-{
-	Vector2D temp(this->x, this->y);
-	temp.x -= rhs.x;
-	temp.y -= rhs.y;
-	return temp;
-}
-
 LAND::LAND_TRIANGLE::LAND_TRIANGLE(Vector2D* _p1, Vector2D* _p2, Vector2D* _p3 )
 {
 	P1 = _p1;

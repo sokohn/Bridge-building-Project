@@ -78,6 +78,8 @@
     <ClCompile Include="Land.cpp" />
     <ClCompile Include="Level.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="UI\Button.cpp" />
+    <ClCompile Include="UI\Menu.cpp" />
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -86,6 +88,9 @@
     <ClInclude Include="Girder.h" />
     <ClInclude Include="Land.h" />
     <ClInclude Include="Level.h" />
+    <ClInclude Include="UI\Button.h" />
+    <ClInclude Include="UI\Menu.h" />
+    <ClInclude Include="UI\UI_Base.h" />
     <ClInclude Include="Util.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
